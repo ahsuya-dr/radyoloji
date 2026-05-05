@@ -127,15 +127,19 @@ async def batch_analyze(files: list[UploadFile] = File(...), cases_json: str = F
     except: cases = []
     system = build_prompt(cases)
 
-    async def stream():
-        total = len(files)
-        DELAY = 4.5  # Gemini free: 15 req/min → 4s ara yeterli
+    # Tüm dosyaları önce belleğe al
+    file_data = []
+    for f in files:
+        data = await f.read()
+        file_data.append((f.filename or "dosya", data))
 
-        for i, f in enumerate(files):
-            fname = f.filename or f"dosya_{i+1}"
+    async def stream():
+        total = len(file_data)
+        DELAY = 4.5
+
+        for i, (fname, data) in enumerate(file_data):
             try:
-                data = await f.read()
-                png  = to_png(data, fname)
+                png = to_png(data, fname)
                 result = None
                 for attempt in range(3):
                     try:
