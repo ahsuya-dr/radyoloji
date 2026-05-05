@@ -4,20 +4,19 @@ import base64
 import tempfile
 import re
 import json
+import asyncio
 from pathlib import Path
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 import httpx
 import secrets
 
 app = FastAPI(title="CT Analiz")
-
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
-
 security = HTTPBasic()
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
@@ -34,7 +33,6 @@ def verify_auth(credentials: HTTPBasicCredentials = Depends(security)):
 
 def to_png(data: bytes, filename: str) -> bytes:
     ext = Path(filename).suffix.lower()
-
     if ext == ".dcm":
         try:
             import pydicom, numpy as np
@@ -50,8 +48,7 @@ def to_png(data: bytes, filename: str) -> bytes:
             Image.fromarray(arr).convert("RGB").save(buf, "PNG")
             return buf.getvalue()
         except Exception as e:
-            raise HTTPException(400, f"DICOM hatası: {e}")
-
+            raise Exception(f"DICOM hatası: {e}")
     if ext in (".mp4", ".avi", ".mov", ".mkv", ".webm"):
         try:
             import cv2
@@ -66,45 +63,44 @@ def to_png(data: bytes, filename: str) -> bytes:
             _, buf = cv2.imencode(".png", frame)
             return buf.tobytes()
         except Exception as e:
-            raise HTTPException(400, f"Video hatası: {e}")
-
+            raise Exception(f"Video hatası: {e}")
     try:
         from PIL import Image
         buf = io.BytesIO()
         Image.open(io.BytesIO(data)).convert("RGB").save(buf, "PNG")
         return buf.getvalue()
     except Exception as e:
-        raise HTTPException(400, f"Görüntü hatası: {e}")
+        raise Exception(f"Görüntü hatası: {e}")
 
-async def gemini(png: bytes, system: str, user: str) -> str:
+async def gemini_call(png: bytes, system: str) -> str:
     b64 = base64.b64encode(png).decode()
     payload = {
         "system_instruction": {"parts": [{"text": system}]},
         "contents": [{"parts": [
             {"inline_data": {"mime_type": "image/png", "data": b64}},
-            {"text": user}
+            {"text": "Bu tıbbi görüntüyü analiz et."}
         ]}],
         "generationConfig": {"maxOutputTokens": 1500, "temperature": 0.2}
     }
     async with httpx.AsyncClient(timeout=120) as c:
         r = await c.post(f"{GEMINI_URL}?key={GEMINI_API_KEY}", json=payload)
+    if r.status_code == 429:
+        raise Exception("QUOTA_EXCEEDED")
     if r.status_code != 200:
-        raise HTTPException(502, f"Gemini hatası: {r.text[:200]}")
+        raise Exception(f"Gemini {r.status_code}: {r.text[:200]}")
     try:
         return r.json()["candidates"][0]["content"]["parts"][0]["text"]
-    except Exception:
-        raise HTTPException(502, "Gemini yanıtı ayrıştırılamadı")
+    except:
+        raise Exception("Yanıt ayrıştırılamadı")
 
 def build_prompt(cases: list) -> str:
     base = """Sen deneyimli bir radyoloji uzmanısın. Tıbbi görüntüleri sistematik analiz et.
-
 Yanıtını şu başlıklarla ver:
 ### Teknik Kalite
 ### Anatomik Bölge
 ### Bulgular
 ### Kritik Bulgular
 ### Sonuç ve Öneri
-
 Türkçe yaz. Radyoloji terminolojisi kullan. Sadece görülenleri söyle.
 Bu bir karar destek aracıdır; nihai karar hekime aittir."""
     if cases:
@@ -117,17 +113,54 @@ Bu bir karar destek aracıdır; nihai karar hekime aittir."""
 @app.post("/api/analyze")
 async def analyze(file: UploadFile = File(...), cases_json: str = Form(default="[]"), username: str = Depends(verify_auth)):
     data = await file.read()
-    png  = to_png(data, file.filename or "upload")
+    try:
+        png = to_png(data, file.filename or "upload")
+        cases = json.loads(cases_json) if cases_json else []
+        result = await gemini_call(png, build_prompt(cases))
+    except Exception as e:
+        raise HTTPException(502, str(e))
+    return {"analysis": result, "filename": file.filename}
+
+@app.post("/api/batch")
+async def batch_analyze(files: list[UploadFile] = File(...), cases_json: str = Form(default="[]"), username: str = Depends(verify_auth)):
     try: cases = json.loads(cases_json)
     except: cases = []
-    result = await gemini(png, build_prompt(cases), "Bu tıbbi görüntüyü analiz et.")
-    return {"analysis": result, "filename": file.filename}
+    system = build_prompt(cases)
+
+    async def stream():
+        total = len(files)
+        DELAY = 4.5  # Gemini free: 15 req/min → 4s ara yeterli
+
+        for i, f in enumerate(files):
+            fname = f.filename or f"dosya_{i+1}"
+            try:
+                data = await f.read()
+                png  = to_png(data, fname)
+                result = None
+                for attempt in range(3):
+                    try:
+                        result = await gemini_call(png, system)
+                        break
+                    except Exception as e:
+                        if "QUOTA_EXCEEDED" in str(e) and attempt < 2:
+                            await asyncio.sleep(65)
+                        else:
+                            raise
+                yield f"data: {json.dumps({'i': i, 'total': total, 'filename': fname, 'status': 'ok', 'analysis': result})}\n\n"
+            except Exception as e:
+                yield f"data: {json.dumps({'i': i, 'total': total, 'filename': fname, 'status': 'error', 'error': str(e)})}\n\n"
+
+            if i < total - 1:
+                await asyncio.sleep(DELAY)
+
+        yield f"data: {json.dumps({'status': 'done', 'total': total})}\n\n"
+
+    return StreamingResponse(stream(), media_type="text/event-stream")
 
 @app.post("/api/compare")
 async def compare(ai_text: str = Form(...), expert_text: str = Form(...), username: str = Depends(verify_auth)):
     system = """Tıbbi eğitim asistanısın. AI yorumunu uzman raporuyla karşılaştır.
-SADECE JSON döndür:
-{"score":<0-100>,"matched":"<doğru tespitler>","missed":"<kaçırılanlar>","extra":"<yanlış/fazlalar>","summary":"<öğrenme özeti>"}"""
+SADECE JSON döndür: {"score":<0-100>,"matched":"<doğru>","missed":"<kaçırılan>","extra":"<yanlış>","summary":"<özet>"}"""
     payload = {
         "system_instruction": {"parts": [{"text": system}]},
         "contents": [{"parts": [{"text": f"AI:\n{ai_text}\n\nUZMAN:\n{expert_text}"}]}],
@@ -146,7 +179,6 @@ SADECE JSON döndür:
 async def ping(username: str = Depends(verify_auth)):
     return {"status": "ok"}
 
-# Static files — same directory
 static_dir = Path(__file__).parent
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
