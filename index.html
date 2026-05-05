@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CT Analiz · Radyoloji Platformu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #07090d;
+  --s1:       #0d1117;
+  --s2:       #131920;
+  --s3:       #1a2330;
+  --border:   #1f2d3d;
+  --border2:  #2a3d52;
+  --accent:   #3de8c0;
+  --accent2:  #4da6ff;
+  --warn:     #ff7043;
+  --ok:       #3deba0;
+  --bad:      #ff4f6a;
+  --text:     #c8d8e8;
+  --t2:       #6a8aaa;
+  --t3:       #344a60;
+  --mono:     'Space Mono', monospace;
+  --sans:     'DM Sans', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ── SCANLINES ── */
+body::after {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:9999;
+  background: repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(61,232,192,.012) 3px,rgba(61,232,192,.012) 4px);
+}
+
+/* ── LAYOUT ── */
+.shell { display:grid; grid-template-rows:52px 1fr; height:100vh; overflow:hidden; }
+.topbar {
+  background: var(--s1);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 16px;
+  justify-content: space-between;
+}
+.logo {
+  display:flex; align-items:center; gap:10px;
+  font-family:var(--mono); font-size:12px; letter-spacing:.06em; color:var(--text);
+}
+.logo-sq {
+  width:28px; height:28px; border-radius:5px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display:flex; align-items:center; justify-content:center;
+  font-weight:700; font-size:11px; color:var(--bg);
+}
+.logo em { color:var(--accent); font-style:normal; }
+
+.topbar-right { display:flex; align-items:center; gap:12px; }
+
+.pill {
+  background:var(--s2); border:1px solid var(--border);
+  border-radius:20px; padding:3px 12px;
+  font-family:var(--mono); font-size:10px; color:var(--t2);
+  display:flex; align-items:center; gap:6px;
+}
+.dot { width:6px; height:6px; border-radius:50%; background:var(--accent); animation:blink 2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+
+.content {
+  display:grid;
+  grid-template-columns: 420px 1fr;
+  overflow:hidden;
+}
+
+/* ── LEFT PANEL ── */
+.left {
+  background: var(--s1);
+  border-right: 1px solid var(--border);
+  display:flex; flex-direction:column;
+  overflow:hidden;
+}
+
+.panel-head {
+  padding:16px 20px;
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.panel-title {
+  font-family:var(--mono); font-size:10px;
+  letter-spacing:.12em; text-transform:uppercase; color:var(--t2);
+  display:flex; align-items:center; gap:8px;
+}
+.panel-title span { color:var(--accent); font-size:14px; }
+
+.left-body { flex:1; overflow-y:auto; padding:16px 20px; display:flex; flex-direction:column; gap:14px; }
+
+/* ── DROP ZONE ── */
+.dropzone {
+  border:1.5px dashed var(--border2);
+  border-radius:10px;
+  background:var(--s2);
+  padding:28px 20px;
+  text-align:center;
+  cursor:pointer;
+  position:relative;
+  overflow:hidden;
+  transition: border-color .2s, background .2s;
+}
+.dropzone::before {
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% -10%, rgba(61,232,192,.06) 0%,transparent 70%);
+}
+.dropzone:hover, .dropzone.over {
+  border-color: var(--accent);
+  background: rgba(61,232,192,.04);
+}
+.dropzone input { position:absolute;inset:0;opacity:0;cursor:pointer; }
+.dz-icon { font-size:32px; margin-bottom:8px; opacity:.5; }
+.dz-label { font-size:12px; color:var(--t2); }
+.dz-label strong { color:var(--accent); display:block; font-size:14px; margin-bottom:3px; }
+.format-row { display:flex; gap:5px; justify-content:center; margin-top:10px; flex-wrap:wrap; }
+.ftag {
+  background:var(--s3); border:1px solid var(--border2);
+  border-radius:4px; padding:2px 7px;
+  font-family:var(--mono); font-size:9px; color:var(--t3);
+}
+
+/* ── PREVIEW ── */
+.preview-wrap {
+  display:none;
+  border-radius:10px; overflow:hidden;
+  background:#000; position:relative;
+  aspect-ratio:1; max-height:300px;
+}
+.preview-wrap img { width:100%;height:100%;object-fit:contain; }
+.preview-bar {
+  position:absolute; bottom:0; left:0; right:0;
+  background:linear-gradient(transparent,rgba(0,0,0,.85));
+  padding:10px; font-family:var(--mono); font-size:9px; color:var(--accent);
+  display:flex; justify-content:space-between;
+}
+
+/* ── SCAN LINE LOADER ── */
+.scanline-loader {
+  height:2px; background:var(--border); border-radius:2px; overflow:hidden; display:none;
+}
+.scanline-loader.on { display:block; }
+.scanline-loader::after {
+  content:''; display:block; height:100%; width:35%;
+  background:linear-gradient(90deg, transparent, var(--accent), transparent);
+  animation:sweep 1.4s infinite;
+}
+@keyframes sweep { 0%{transform:translateX(-200%)} 100%{transform:translateX(500%)} }
+
+/* ── BUTTONS ── */
+.btn {
+  display:inline-flex; align-items:center; gap:7px;
+  padding:9px 18px; border-radius:7px; border:none;
+  cursor:pointer; font-family:var(--sans); font-size:13px; font-weight:500;
+  transition:all .15s;
+}
+.btn-accent { background:var(--accent); color:var(--bg); }
+.btn-accent:hover { filter:brightness(1.1); transform:translateY(-1px); }
+.btn-accent:disabled { background:var(--t3); cursor:not-allowed; transform:none; filter:none; }
+.btn-ghost {
+  background:var(--s2); color:var(--t2);
+  border:1px solid var(--border2); font-size:11px; padding:6px 12px;
+}
+.btn-ghost:hover { border-color:var(--accent); color:var(--accent); }
+.btn-blue { background:var(--accent2); color:var(--bg); }
+.btn-blue:hover { filter:brightness(1.1); transform:translateY(-1px); }
+.btn-blue:disabled { background:var(--t3); cursor:not-allowed; transform:none; filter:none; }
+
+.action-row { display:flex; align-items:center; gap:10px; }
+.status-txt { font-family:var(--mono); font-size:10px; color:var(--t3); }
+
+/* ── RIGHT PANEL ── */
+.right { display:flex; flex-direction:column; overflow:hidden; }
+
+/* ── TABS ── */
+.tabbar {
+  background:var(--s1); border-bottom:1px solid var(--border);
+  display:flex; gap:2px; padding:8px 20px 0;
+}
+.tab {
+  padding:8px 16px; border-radius:7px 7px 0 0;
+  border:none; background:none; cursor:pointer;
+  font-family:var(--sans); font-size:12px; font-weight:500;
+  color:var(--t2); border-bottom:2px solid transparent;
+  transition:all .15s;
+}
+.tab.on { color:var(--accent); border-bottom-color:var(--accent); }
+
+.tab-panels { flex:1; overflow:hidden; display:flex; flex-direction:column; }
+.tp { display:none; flex:1; overflow-y:auto; padding:20px; flex-direction:column; gap:14px; }
+.tp.on { display:flex; }
+
+/* ── AI OUTPUT ── */
+.ai-card {
+  background:var(--s1); border:1px solid var(--border);
+  border-radius:10px; padding:18px;
+  font-size:13px; line-height:1.75; min-height:200px; position:relative;
+}
+.ai-card .empty {
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-family:var(--mono); font-size:11px; color:var(--t3); text-align:center;
+}
+.ai-card h3 {
+  font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); margin:14px 0 6px; padding-bottom:4px; border-bottom:1px solid var(--border);
+}
+.ai-card h3:first-child { margin-top:0; }
+.ai-card p { margin-bottom:6px; }
+.ai-card ul { padding-left:18px; }
+.ai-card li { margin-bottom:3px; }
+
+/* ── EXPERT INPUT ── */
+.expert-area {
+  width:100%; background:var(--s2); border:1px solid var(--border);
+  border-radius:8px; padding:14px; color:var(--text);
+  font-family:var(--sans); font-size:13px; line-height:1.6;
+  resize:vertical; min-height:160px; outline:none;
+  transition:border-color .2s;
+}
+.expert-area:focus { border-color:var(--accent2); }
+.section-label {
+  font-family:var(--mono); font-size:10px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--t2); margin-bottom:6px;
+  display:block;
+}
+
+/* ── COMPARISON ── */
+.score-card {
+  background:var(--s2); border:1px solid var(--border2);
+  border-radius:10px; padding:18px; text-align:center;
+}
+.score-lbl { font-family:var(--mono); font-size:10px; color:var(--t3); letter-spacing:.1em; text-transform:uppercase; margin-bottom:6px; }
+.score-num { font-family:var(--mono); font-size:42px; font-weight:700; }
+.score-track { height:4px; background:var(--border); border-radius:2px; margin-top:10px; overflow:hidden; }
+.score-fill { height:100%; border-radius:2px; transition:width 1.2s cubic-bezier(.22,1,.36,1); }
+
+.cmp-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.cmp-box {
+  background:var(--s2); border:1px solid var(--border);
+  border-radius:8px; padding:14px;
+}
+.cmp-box h4 { font-family:var(--mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase; margin-bottom:8px; }
+.cmp-box p { font-size:12px; color:var(--t2); line-height:1.55; }
+.cmp-ok h4 { color:var(--ok); }
+.cmp-miss h4 { color:var(--bad); }
+.cmp-miss p { color:var(--bad); }
+.cmp-warn h4 { color:var(--warn); }
+.cmp-learn { border-color:rgba(61,232,192,.25); background:rgba(61,232,192,.04); }
+.cmp-learn h4 { color:var(--accent); }
+
+/* ── CASES ── */
+.case-row {
+  background:var(--s1); border:1px solid var(--border);
+  border-radius:8px; padding:12px 16px;
+  display:grid; grid-template-columns:44px 1fr auto 72px;
+  align-items:center; gap:12px;
+  transition:border-color .15s;
+}
+.case-row:hover { border-color:var(--border2); }
+.case-n { font-family:var(--mono); font-size:10px; color:var(--t3); }
+.case-info strong { display:block; font-size:13px; color:var(--text); }
+.case-info span { font-size:11px; color:var(--t2); }
+.case-score {
+  font-family:var(--mono); font-size:11px;
+  padding:3px 9px; border-radius:5px;
+}
+.cs-hi { background:rgba(61,235,160,.12); color:var(--ok); }
+.cs-md { background:rgba(255,213,0,.1); color:#ffd500; }
+.cs-lo { background:rgba(255,79,106,.1); color:var(--bad); }
+.case-date { font-family:var(--mono); font-size:9px; color:var(--t3); }
+
+.empty-state {
+  text-align:center; padding:48px 20px;
+  font-family:var(--mono); font-size:11px; color:var(--t3); line-height:2;
+}
+
+/* ── TOAST ── */
+.toast {
+  position:fixed; bottom:22px; right:22px;
+  background:var(--s2); border:1px solid var(--border2); border-radius:8px;
+  padding:11px 16px; font-size:13px;
+  display:flex; align-items:center; gap:9px;
+  z-index:10000; transform:translateY(80px); opacity:0;
+  transition:all .3s cubic-bezier(.22,1,.36,1);
+}
+.toast.show { transform:translateY(0); opacity:1; }
+.toast.ok { border-color:var(--ok); color:var(--ok); }
+.toast.err { border-color:var(--bad); color:var(--bad); }
+
+/* scrollbar */
+::-webkit-scrollbar { width:3px; }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="logo">
+      <div class="logo-sq">CT</div>
+      RADYO<em>AI</em> &nbsp;·&nbsp; Görüntü Analiz
+    </div>
+    <div class="topbar-right">
+      <div class="pill"><div class="dot"></div><span id="casePill">0 Vaka</span></div>
+      <div class="pill" id="avgPill">— Doğruluk</div>
+      <button class="btn btn-ghost" id="logoutBtn">Çıkış</button>
+    </div>
+  </header>
+
+  <div class="content">
+    <!-- LEFT: Upload + Analyze -->
+    <aside class="left">
+      <div class="panel-head">
+        <div class="panel-title"><span>◈</span> Görüntü Yükle</div>
+        <button class="btn btn-ghost" id="clearBtn">Temizle</button>
+      </div>
+      <div class="left-body">
+
+        <!-- Drop zone -->
+        <div class="dropzone" id="dropZone">
+          <input type="file" id="fileInput" accept="image/*,.dcm,.mp4,.avi,.mov,.mkv,.webm" />
+          <div class="dz-icon">⊕</div>
+          <div class="dz-label">
+            <strong>Dosya Seç veya Sürükle</strong>
+            DICOM · Görüntü · Video
+          </div>
+          <div class="format-row">
+            <span class="ftag">DCM</span>
+            <span class="ftag">PNG</span>
+            <span class="ftag">JPG</span>
+            <span class="ftag">MP4</span>
+            <span class="ftag">AVI</span>
+            <span class="ftag">MOV</span>
+          </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="preview-wrap" id="previewWrap">
+          <img id="previewImg" alt="önizleme" />
+          <div class="preview-bar">
+            <span id="prevName">—</span>
+            <span id="prevSize">—</span>
+          </div>
+        </div>
+
+        <!-- Analyze -->
+        <div class="scanline-loader" id="loader"></div>
+        <div class="action-row">
+          <button class="btn btn-accent" id="analyzeBtn" disabled>⟳ Analiz Et</button>
+          <span class="status-txt" id="statusTxt"></span>
+        </div>
+
+        <!-- AI result (compact) -->
+        <div id="leftResult" style="display:none">
+          <div class="ai-card" id="leftAiCard" style="max-height:260px;overflow-y:auto;font-size:12px"></div>
+        </div>
+
+      </div>
+    </aside>
+
+    <!-- RIGHT: Tabs -->
+    <main class="right">
+      <nav class="tabbar">
+        <button class="tab on" onclick="goTab('analysis')">AI Analizi</button>
+        <button class="tab" onclick="goTab('expert')">Uzman Raporu</button>
+        <button class="tab" onclick="goTab('compare')">Karşılaştırma</button>
+        <button class="tab" onclick="goTab('history')">Geçmiş</button>
+      </nav>
+
+      <div class="tab-panels">
+
+        <!-- ANALYSIS TAB -->
+        <div class="tp on" id="tp-analysis">
+          <div class="ai-card" id="mainAiCard">
+            <div class="empty">▸ Görüntü yükleyin ve Analiz Et butonuna basın</div>
+          </div>
+        </div>
+
+        <!-- EXPERT TAB -->
+        <div class="tp" id="tp-expert">
+          <label class="section-label">Uzman Doktor Raporu</label>
+          <textarea class="expert-area" id="expertTxt"
+            placeholder="Örn: Sağ alt lob posterobazal segmentte 8×6 mm nodüler dansite artışı izlenmektedir. Mediastinal LAP görülmemektedir. Plevral effüzyon yok..."></textarea>
+          <div class="action-row">
+            <button class="btn btn-blue" id="compareBtn" disabled>Karşılaştır & Kaydet</button>
+            <span class="status-txt" id="cmpStatus"></span>
+          </div>
+        </div>
+
+        <!-- COMPARE TAB -->
+        <div class="tp" id="tp-compare">
+          <div id="cmpResult">
+            <div class="empty-state">Henüz karşılaştırma yapılmadı.<br>Analiz yapın → Uzman Raporu girin → Karşılaştır</div>
+          </div>
+        </div>
+
+        <!-- HISTORY TAB -->
+        <div class="tp" id="tp-history">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:4px">
+            <button class="btn btn-ghost" id="clearDataBtn">Tümünü Sil</button>
+          </div>
+          <div id="casesList"></div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────
+let currentFile = null;
+let currentAI   = null;
+let cases = JSON.parse(localStorage.getItem('rtCases') || '[]');
+
+// ── AUTH HELPERS ───────────────────────────────────────
+// We rely on HTTP Basic auth handled by the browser.
+// On first load we ping to verify credentials.
+async function apiFetch(url, opts = {}) {
+  const r = await fetch(url, { credentials: 'include', ...opts });
+  if (r.status === 401) {
+    toast('Oturum süresi doldu, lütfen sayfayı yenileyin.', 'err');
+    throw new Error('auth');
+  }
+  return r;
+}
+
+// ── TABS ───────────────────────────────────────────────
+function goTab(id) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    const ids = ['analysis','expert','compare','history'];
+    t.classList.toggle('on', ids[i] === id);
+  });
+  document.querySelectorAll('.tp').forEach(p => p.classList.remove('on'));
+  document.getElementById('tp-' + id).classList.add('on');
+}
+
+// ── FILE HANDLING ──────────────────────────────────────
+const fileInput = document.getElementById('fileInput');
+const dropZone  = document.getElementById('dropZone');
+
+function handleFile(file) {
+  if (!file) return;
+  currentFile = file;
+  // Show local preview for images
+  if (file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      document.getElementById('previewImg').src = e.target.result;
+      document.getElementById('previewWrap').style.display = 'block';
+      document.getElementById('dropZone').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  } else {
+    document.getElementById('previewWrap').style.display = 'none';
+    document.getElementById('dropZone').style.display = 'none';
+    // show filename
+  }
+  document.getElementById('prevName').textContent = file.name;
+  document.getElementById('prevSize').textContent = (file.size / (1024*1024)).toFixed(1) + ' MB';
+  document.getElementById('analyzeBtn').disabled = false;
+  currentAI = null;
+  document.getElementById('compareBtn').disabled = true;
+  resetAI();
+}
+
+fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('over');
+  handleFile(e.dataTransfer.files[0]);
+});
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  currentFile = null; currentAI = null;
+  fileInput.value = '';
+  document.getElementById('previewWrap').style.display = 'none';
+  document.getElementById('dropZone').style.display = 'block';
+  document.getElementById('analyzeBtn').disabled = true;
+  document.getElementById('compareBtn').disabled = true;
+  document.getElementById('expertTxt').value = '';
+  resetAI();
+  resetCmp();
+});
+
+// ── ANALYZE ───────────────────────────────────────────
+document.getElementById('analyzeBtn').addEventListener('click', async () => {
+  if (!currentFile) return;
+  setLoading(true, 'Görüntü işleniyor...');
+  resetAI();
+
+  const fd = new FormData();
+  fd.append('file', currentFile);
+  fd.append('cases_json', JSON.stringify(cases));
+
+  try {
+    const r = await apiFetch('/api/analyze', { method:'POST', body:fd });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'Hata');
+    currentAI = d.analysis;
+    renderAI(d.analysis);
+    document.getElementById('compareBtn').disabled = false;
+    goTab('analysis');
+  } catch(e) {
+    if (e.message !== 'auth') toast('Analiz hatası: ' + e.message, 'err');
+  } finally {
+    setLoading(false);
+  }
+});
+
+// ── COMPARE ───────────────────────────────────────────
+document.getElementById('compareBtn').addEventListener('click', async () => {
+  const expert = document.getElementById('expertTxt').value.trim();
+  if (!expert || !currentAI) return;
+
+  document.getElementById('cmpStatus').textContent = 'değerlendiriliyor...';
+  document.getElementById('compareBtn').disabled = true;
+
+  const fd = new FormData();
+  fd.append('ai_text', currentAI);
+  fd.append('expert_text', expert);
+
+  try {
+    const r = await apiFetch('/api/compare', { method:'POST', body:fd });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'Hata');
+
+    const newCase = {
+      id: Date.now(),
+      date: new Date().toLocaleDateString('tr-TR'),
+      ai: currentAI,
+      expert,
+      score: d.score,
+      summary: d.summary,
+      missed: d.missed,
+    };
+    cases.push(newCase);
+    localStorage.setItem('rtCases', JSON.stringify(cases));
+
+    renderCmp(d);
+    renderCases();
+    updateStats();
+    goTab('compare');
+    toast(`Kaydedildi · Skor: ${d.score}/100`, 'ok');
+  } catch(e) {
+    if (e.message !== 'auth') toast('Karşılaştırma hatası: ' + e.message, 'err');
+  } finally {
+    document.getElementById('cmpStatus').textContent = '';
+    document.getElementById('compareBtn').disabled = false;
+  }
+});
+
+// ── RENDER ────────────────────────────────────────────
+function renderAI(txt) {
+  const html = txt
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^#{1,3}\s(.+)$/gm, '<h3>$1</h3>')
+    .replace(/^[-•]\s(.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*?<\/li>)/gs, '<ul>$1</ul>')
+    .replace(/\n\n/g, '<br/><br/>')
+    .replace(/\n/g, '<br/>');
+  document.getElementById('mainAiCard').innerHTML = html;
+  document.getElementById('leftAiCard').innerHTML = html;
+  document.getElementById('leftResult').style.display = 'block';
+}
+
+function resetAI() {
+  document.getElementById('mainAiCard').innerHTML = '<div class="empty">▸ Görüntü yükleyin ve Analiz Et butonuna basın</div>';
+  document.getElementById('leftResult').style.display = 'none';
+}
+
+function renderCmp(d) {
+  const color = d.score >= 80 ? 'var(--ok)' : d.score >= 60 ? '#ffd500' : 'var(--bad)';
+  document.getElementById('cmpResult').innerHTML = `
+    <div class="score-card">
+      <div class="score-lbl">AI Doğruluk Skoru</div>
+      <div class="score-num" style="color:${color}">${d.score}<span style="font-size:18px;color:var(--t3)">/100</span></div>
+      <div class="score-track"><div class="score-fill" id="sf" style="width:0;background:${color}"></div></div>
+    </div>
+    <div class="cmp-grid">
+      <div class="cmp-box cmp-ok"><h4>✓ Doğru Tespitler</h4><p>${d.matched||'—'}</p></div>
+      <div class="cmp-box cmp-miss"><h4>✗ Kaçırılan</h4><p>${d.missed||'—'}</p></div>
+    </div>
+    ${d.extra ? `<div class="cmp-box cmp-warn"><h4>⚠ Fazla/Yanlış</h4><p>${d.extra}</p></div>` : ''}
+    <div class="cmp-box cmp-learn"><h4>↑ Öğrenme Notu</h4><p>${d.summary||'—'}</p></div>
+  `;
+  setTimeout(() => {
+    const sf = document.getElementById('sf');
+    if (sf) sf.style.width = d.score + '%';
+  }, 100);
+}
+
+function resetCmp() {
+  document.getElementById('cmpResult').innerHTML = '<div class="empty-state">Henüz karşılaştırma yapılmadı.</div>';
+}
+
+function renderCases() {
+  const el = document.getElementById('casesList');
+  if (!cases.length) {
+    el.innerHTML = '<div class="empty-state">Henüz kaydedilmiş vaka yok.</div>';
+    return;
+  }
+  el.innerHTML = [...cases].reverse().map((c, i) => {
+    const cls = c.score >= 80 ? 'cs-hi' : c.score >= 60 ? 'cs-md' : 'cs-lo';
+    const n = cases.length - i;
+    return `<div class="case-row">
+      <div class="case-n">#${String(n).padStart(3,'0')}</div>
+      <div class="case-info"><strong>Vaka ${n}</strong><span>${c.summary||'—'}</span></div>
+      <div class="case-score ${cls}">${c.score}/100</div>
+      <div class="case-date">${c.date}</div>
+    </div>`;
+  }).join('');
+}
+
+function updateStats() {
+  document.getElementById('casePill').textContent = cases.length + ' Vaka';
+  if (cases.length) {
+    const avg = Math.round(cases.reduce((s,c) => s+(c.score||0),0)/cases.length);
+    document.getElementById('avgPill').textContent = `%${avg} Doğruluk`;
+  }
+}
+
+// ── HELPERS ───────────────────────────────────────────
+function setLoading(on, txt='') {
+  document.getElementById('loader').classList.toggle('on', on);
+  document.getElementById('analyzeBtn').disabled = on;
+  document.getElementById('statusTxt').textContent = on ? txt : '';
+}
+
+function toast(msg, type='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = (type==='ok'?'✓ ':'✗ ') + msg;
+  t.className = `toast show ${type}`;
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+document.getElementById('clearDataBtn').addEventListener('click', () => {
+  if (!confirm('Tüm vaka geçmişi silinsin mi?')) return;
+  cases = [];
+  localStorage.removeItem('rtCases');
+  renderCases();
+  updateStats();
+  toast('Veriler silindi', 'ok');
+});
+
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  // Force re-auth by navigating to a fake endpoint
+  fetch('/api/ping', {
+    headers: { 'Authorization': 'Basic ' + btoa('logout:logout') }
+  }).finally(() => location.reload());
+});
+
+// ── INIT ──────────────────────────────────────────────
+renderCases();
+updateStats();
+</script>
+</body>
+</html>
