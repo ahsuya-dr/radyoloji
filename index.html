@@ -395,7 +395,11 @@ const batchInput = document.getElementById('batchInput');
 const batchDrop  = document.getElementById('batchDrop');
  
 function handleBatchFiles(files) {
-  batchFiles = Array.from(files);
+  batchFiles = Array.from(files).filter(f => f.size > 0);
+  if (!batchFiles.length) {
+    // Dosyalar boş geldi, yeniden oku
+    batchFiles = Array.from(files);
+  }
   if (!batchFiles.length) return;
   document.getElementById('batchCount').textContent = batchFiles.length + ' dosya seçildi';
   document.getElementById('batchFileList').style.display = 'block';
