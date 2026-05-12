@@ -75,40 +75,30 @@ def to_png(data: bytes, filename: str) -> bytes:
 async def gemini_call(png: bytes, system: str) -> str:
     b64 = base64.b64encode(png).decode()
     payload = {
-        "system_instruction": {"parts": [{"text": system}]},
-        "contents": [{"parts": [
-            {"inline_data": {"mime_type": "image/png", "data": b64}},
-            {"text": "Bu tıbbi görüntüyü analiz et."}
-        ]}],
-        "generationConfig": {"maxOutputTokens": 1500, "temperature": 0.2}
+        "model": "meta-llama/llama-4-maverick:free",
+        "messages": [{
+            "role": "user",
+            "content": [
+                {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64}"}},
+                {"type": "text", "text": system + "\n\nBu tıbbi görüntüyü analiz et."}
+            ]
+        }],
+        "max_tokens": 1500
     }
     async with httpx.AsyncClient(timeout=120) as c:
-        r = await c.post(f"{GEMINI_URL}?key={GEMINI_API_KEY}", json=payload)
+        r = await c.post(
+            GEMINI_URL,
+            json=payload,
+            headers={"Authorization": f"Bearer {GEMINI_API_KEY}", "Content-Type": "application/json"}
+        )
     if r.status_code == 429:
         raise Exception("QUOTA_EXCEEDED")
     if r.status_code != 200:
-        raise Exception(f"Gemini {r.status_code}: {r.text[:200]}")
+        raise Exception(f"OpenRouter hatası: {r.text[:200]}")
     try:
-        return r.json()["candidates"][0]["content"]["parts"][0]["text"]
+        return r.json()["choices"][0]["message"]["content"]
     except:
         raise Exception("Yanıt ayrıştırılamadı")
-
-def build_prompt(cases: list) -> str:
-    base = """Sen deneyimli bir radyoloji uzmanısın. Tıbbi görüntüleri sistematik analiz et.
-Yanıtını şu başlıklarla ver:
-### Teknik Kalite
-### Anatomik Bölge
-### Bulgular
-### Kritik Bulgular
-### Sonuç ve Öneri
-Türkçe yaz. Radyoloji terminolojisi kullan. Sadece görülenleri söyle.
-Bu bir karar destek aracıdır; nihai karar hekime aittir."""
-    if cases:
-        base += f"\n\n— ÖĞRENME VERİTABANI ({len(cases)} vaka) —\n"
-        for i, c in enumerate(cases[-8:], 1):
-            base += f"\nVAKA {i}:\nAI: {c['ai'][:250]}...\nUzman: {c['expert'][:250]}...\nSkor: {c.get('score','?')}/100\n"
-        base += "\nBu vakalardan öğrenerek daha önce kaçırılan bulguları dikkate al."
-    return base
 
 @app.post("/api/analyze")
 async def analyze(file: UploadFile = File(...), cases_json: str = Form(default="[]"), username: str = Depends(verify_auth)):
