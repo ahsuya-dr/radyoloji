@@ -19,10 +19,10 @@ app = FastAPI(title="CT Analiz")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 security = HTTPBasic()
 
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+GEMINI_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 APP_PASSWORD   = os.environ.get("APP_PASSWORD", "ct1234")
 APP_USERNAME   = os.environ.get("APP_USERNAME", "doktor")
-GEMINI_URL     = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent"
+GEMINI_URL     = "https://openrouter.ai/api/v1/chat/completions"
 
 def verify_auth(credentials: HTTPBasicCredentials = Depends(security)):
     ok_user = secrets.compare_digest(credentials.username, APP_USERNAME)
