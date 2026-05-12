@@ -186,6 +186,73 @@ async def ping(username: str = Depends(verify_auth)):
 static_dir = Path(__file__).parent
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
+@app.post("/api/series")
+async def series_analyze(
+    files: list[UploadFile] = File(...),
+    cases_json: str = Form(default="[]"),
+    username: str = Depends(verify_auth)
+):
+    try: cases = json.loads(cases_json)
+    except: cases = []
+
+    # Tüm dosyaları oku
+    all_files = []
+    for f in files:
+        data = await f.read()
+        all_files.append((f.filename or "kesit", data))
+
+    total = len(all_files)
+
+    # Akıllı örnekleme: max 20 kesit seç
+    MAX_SAMPLES = 20
+    if total <= MAX_SAMPLES:
+        sampled = all_files
+    else:
+        step = total / MAX_SAMPLES
+        sampled = [all_files[int(i * step)] for i in range(MAX_SAMPLES)]
+
+    # PNG'ye çevir
+    images_b64 = []
+    for fname, data in sampled:
+        try:
+            png = to_png(data, fname)
+            images_b64.append(base64.b64encode(png).decode())
+        except:
+            continue
+
+    # Tek Gemini isteği — tüm görüntüler birlikte
+    system = build_prompt(cases) + f"""
+
+Bu istek {total} kesitlik bir CT serisinden sistematik örnekleme ile seçilmiş {len(images_b64)} temsili kesiti içermektedir.
+Tüm kesimleri bütünsel olarak değerlendir, TEK kapsamlı radyoloji raporu yaz."""
+
+    parts = []
+    for b64 in images_b64:
+        parts.append({"inline_data": {"mime_type": "image/png", "data": b64}})
+    parts.append({"text": f"Bu {len(images_b64)} CT kesitini bütünsel olarak değerlendirerek tek kapsamlı radyoloji raporu yaz."})
+
+    payload = {
+        "system_instruction": {"parts": [{"text": system}]},
+        "contents": [{"parts": parts}],
+        "generationConfig": {"maxOutputTokens": 2000, "temperature": 0.2}
+    }
+
+    async with httpx.AsyncClient(timeout=180) as c:
+        r = await c.post(f"{GEMINI_URL}?key={GEMINI_API_KEY}", json=payload)
+
+    if r.status_code != 200:
+        raise HTTPException(502, f"Gemini hatası: {r.text[:300]}")
+
+    try:
+        result = r.json()["candidates"][0]["content"]["parts"][0]["text"]
+    except:
+        raise HTTPException(502, "Yanıt ayrıştırılamadı")
+
+    return {
+        "report": result,
+        "total_files": total,
+        "sampled": len(images_b64)
+    }
 @app.get("/")
 async def root():
     return FileResponse(str(static_dir / "index.html"))
