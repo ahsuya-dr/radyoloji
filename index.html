@@ -247,6 +247,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 
           <div class="action-row">
             <button class="btn btn-accent" id="batchBtn" disabled>⟳ Toplu Analiz Başlat</button>
+            <button class="btn btn-blue" id="seriesBtn" disabled>⬡ Seri Analizi (Tek Rapor)</button>
             <button class="btn btn-ghost" id="batchStopBtn" style="display:none">■ Durdur</button>
             <span class="status-txt" id="batchStatus"></span>
           </div>
@@ -654,6 +655,55 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
 });
 
 renderCases(); updateStats();
+document.getElementById('seriesBtn').addEventListener('click', async () => {
+  if (!batchFiles.length) return;
+  document.getElementById('seriesBtn').disabled = true;
+  document.getElementById('batchStatus').textContent = `${batchFiles.length} kesit örnekleniyor...`;
+  document.getElementById('batchProgress').style.display = 'block';
+  document.getElementById('bpText').textContent = 'Gemini\'ye gönderiliyor...';
+  document.getElementById('bpFill').style.width = '30%';
+  goTab('analysis');
+
+  try {
+    const fd = new FormData();
+    // Tarayıcıda örnekle: max 20 dosya seç
+    const MAX = 20;
+    const total = batchFiles.length;
+    const sampled = total <= MAX
+      ? batchFiles
+      : Array.from({length: MAX}, (_, i) => batchFiles[Math.floor(i * total / MAX)]);
+
+    for (const f of sampled) {
+      const blob = await compressImage(f);
+      fd.append('files', blob, f.name.replace(/\.[^.]+$/, '.jpg'));
+    }
+    fd.append('cases_json', JSON.stringify(cases));
+
+    document.getElementById('bpFill').style.width = '60%';
+    document.getElementById('bpText').textContent = 'AI raporu oluşturuyor...';
+
+    const r = await fetch('/api/series', {method:'POST', body:fd, credentials:'include'});
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail||'Hata');
+
+    document.getElementById('bpFill').style.width = '100%';
+    document.getElementById('bpText').textContent = 'Tamamlandı';
+    document.getElementById('mainAiCard').innerHTML = `
+      <div style="font-family:var(--mono);font-size:10px;color:var(--accent);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)">
+        SERİ ANALİZİ · ${d.total_files} kesit → ${d.sampled} örnek
+      </div>
+      ${formatAI(d.report)}`;
+    document.getElementById('compareBtn').disabled = false;
+    currentAI = d.report;
+    goTab('analysis');
+    toast(`Seri raporu hazır · ${d.total_files} kesit`, 'ok');
+  } catch(e) {
+    toast('Hata: '+e.message, 'err');
+  } finally {
+    document.getElementById('seriesBtn').disabled = false;
+    document.getElementById('batchStatus').textContent = '';
+  }
+});
 </script>
 </body>
 </html>
