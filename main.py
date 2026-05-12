@@ -10,7 +10,7 @@ from pathlib import Path
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 import httpx
 import secrets
@@ -19,10 +19,11 @@ app = FastAPI(title="CT Analiz")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 security = HTTPBasic()
 
-GEMINI_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
-APP_PASSWORD   = os.environ.get("APP_PASSWORD", "ct1234")
-APP_USERNAME   = os.environ.get("APP_USERNAME", "doktor")
-GEMINI_URL     = "https://openrouter.ai/api/v1/chat/completions"
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+APP_PASSWORD       = os.environ.get("APP_PASSWORD", "ct1234")
+APP_USERNAME       = os.environ.get("APP_USERNAME", "doktor")
+OPENROUTER_URL     = "https://openrouter.ai/api/v1/chat/completions"
+MODEL              = "meta-llama/llama-4-maverick:free"
 
 def verify_auth(credentials: HTTPBasicCredentials = Depends(security)):
     ok_user = secrets.compare_digest(credentials.username, APP_USERNAME)
@@ -72,10 +73,10 @@ def to_png(data: bytes, filename: str) -> bytes:
     except Exception as e:
         raise Exception(f"Görüntü hatası: {e}")
 
-async def gemini_call(png: bytes, system: str) -> str:
+async def ai_call(png: bytes, system: str) -> str:
     b64 = base64.b64encode(png).decode()
     payload = {
-        "model": "meta-llama/llama-4-maverick:free",
+        "model": MODEL,
         "messages": [{
             "role": "user",
             "content": [
@@ -87,18 +88,35 @@ async def gemini_call(png: bytes, system: str) -> str:
     }
     async with httpx.AsyncClient(timeout=120) as c:
         r = await c.post(
-            GEMINI_URL,
+            OPENROUTER_URL,
             json=payload,
-            headers={"Authorization": f"Bearer {GEMINI_API_KEY}", "Content-Type": "application/json"}
+            headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}", "Content-Type": "application/json"}
         )
     if r.status_code == 429:
         raise Exception("QUOTA_EXCEEDED")
     if r.status_code != 200:
-        raise Exception(f"OpenRouter hatası: {r.text[:200]}")
+        raise Exception(f"API hatası ({r.status_code}): {r.text[:200]}")
     try:
         return r.json()["choices"][0]["message"]["content"]
     except:
         raise Exception("Yanıt ayrıştırılamadı")
+
+def build_prompt(cases: list) -> str:
+    base = """Sen deneyimli bir radyoloji uzmanısın. Tıbbi görüntüleri sistematik analiz et.
+Yanıtını şu başlıklarla ver:
+### Teknik Kalite
+### Anatomik Bölge
+### Bulgular
+### Kritik Bulgular
+### Sonuç ve Öneri
+Türkçe yaz. Radyoloji terminolojisi kullan. Sadece görülenleri söyle.
+Bu bir karar destek aracıdır; nihai karar hekime aittir."""
+    if cases:
+        base += f"\n\n— ÖĞRENME VERİTABANI ({len(cases)} vaka) —\n"
+        for i, c in enumerate(cases[-8:], 1):
+            base += f"\nVAKA {i}:\nAI: {c['ai'][:250]}...\nUzman: {c['expert'][:250]}...\nSkor: {c.get('score','?')}/100\n"
+        base += "\nBu vakalardan öğrenerek daha önce kaçırılan bulguları dikkate al."
+    return base
 
 @app.post("/api/analyze")
 async def analyze(file: UploadFile = File(...), cases_json: str = Form(default="[]"), username: str = Depends(verify_auth)):
@@ -106,65 +124,94 @@ async def analyze(file: UploadFile = File(...), cases_json: str = Form(default="
     try:
         png = to_png(data, file.filename or "upload")
         cases = json.loads(cases_json) if cases_json else []
-        result = await gemini_call(png, build_prompt(cases))
+        result = await ai_call(png, build_prompt(cases))
     except Exception as e:
         raise HTTPException(502, str(e))
     return {"analysis": result, "filename": file.filename}
 
-@app.post("/api/batch")
-async def batch_analyze(files: list[UploadFile] = File(...), cases_json: str = Form(default="[]"), username: str = Depends(verify_auth)):
+@app.post("/api/series")
+async def series_analyze(files: list[UploadFile] = File(...), cases_json: str = Form(default="[]"), username: str = Depends(verify_auth)):
     try: cases = json.loads(cases_json)
     except: cases = []
-    system = build_prompt(cases)
 
-    # Tüm dosyaları önce belleğe al
-    file_data = []
+    all_files = []
     for f in files:
         data = await f.read()
-        file_data.append((f.filename or "dosya", data))
+        all_files.append((f.filename or "kesit", data))
 
-    async def stream():
-        total = len(file_data)
-        DELAY = 4.5
+    total = len(all_files)
+    MAX_SAMPLES = 20
+    if total <= MAX_SAMPLES:
+        sampled = all_files
+    else:
+        step = total / MAX_SAMPLES
+        sampled = [all_files[int(i * step)] for i in range(MAX_SAMPLES)]
 
-        for i, (fname, data) in enumerate(file_data):
-            try:
-                png = to_png(data, fname)
-                result = None
-                for attempt in range(3):
-                    try:
-                        result = await gemini_call(png, system)
-                        break
-                    except Exception as e:
-                        if "QUOTA_EXCEEDED" in str(e) and attempt < 2:
-                            await asyncio.sleep(65)
-                        else:
-                            raise
-                yield f"data: {json.dumps({'i': i, 'total': total, 'filename': fname, 'status': 'ok', 'analysis': result})}\n\n"
-            except Exception as e:
-                yield f"data: {json.dumps({'i': i, 'total': total, 'filename': fname, 'status': 'error', 'error': str(e)})}\n\n"
+    images_b64 = []
+    for fname, data in sampled:
+        try:
+            png = to_png(data, fname)
+            images_b64.append(base64.b64encode(png).decode())
+        except:
+            continue
 
-            if i < total - 1:
-                await asyncio.sleep(DELAY)
+    system = build_prompt(cases) + f"\n\nBu {total} kesitlik CT serisinden {len(images_b64)} temsili kesit seçildi. Tüm kesimleri bütünsel olarak değerlendir, TEK kapsamlı radyoloji raporu yaz."
 
-        yield f"data: {json.dumps({'status': 'done', 'total': total})}\n\n"
+    content = []
+    for b64 in images_b64:
+        content.append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64}"}})
+    content.append({"type": "text", "text": f"Bu {len(images_b64)} CT kesitini bütünsel olarak değerlendirerek tek kapsamlı radyoloji raporu yaz."})
 
-    return StreamingResponse(stream(), media_type="text/event-stream")
+    payload = {
+        "model": MODEL,
+        "messages": [{"role": "user", "content": content}],
+        "max_tokens": 2000
+    }
+
+    async with httpx.AsyncClient(timeout=180) as c:
+        r = await c.post(
+            OPENROUTER_URL,
+            json=payload,
+            headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}", "Content-Type": "application/json"}
+        )
+
+    if r.status_code != 200:
+        raise HTTPException(502, f"API hatası: {r.text[:300]}")
+
+    try:
+        result = r.json()["choices"][0]["message"]["content"]
+    except:
+        raise HTTPException(502, "Yanıt ayrıştırılamadı")
+
+    return {"report": result, "total_files": total, "sampled": len(images_b64)}
 
 @app.post("/api/compare")
 async def compare(ai_text: str = Form(...), expert_text: str = Form(...), username: str = Depends(verify_auth)):
-    system = """Tıbbi eğitim asistanısın. AI yorumunu uzman raporuyla karşılaştır.
-SADECE JSON döndür: {"score":<0-100>,"matched":"<doğru>","missed":"<kaçırılan>","extra":"<yanlış>","summary":"<özet>"}"""
     payload = {
-        "system_instruction": {"parts": [{"text": system}]},
-        "contents": [{"parts": [{"text": f"AI:\n{ai_text}\n\nUZMAN:\n{expert_text}"}]}],
-        "generationConfig": {"maxOutputTokens": 500, "temperature": 0.1}
+        "model": MODEL,
+        "messages": [{
+            "role": "user",
+            "content": f"""Tıbbi eğitim asistanısın. AI yorumunu uzman raporuyla karşılaştır.
+SADECE JSON döndür, başka hiçbir şey yazma:
+{{"score":<0-100>,"matched":"<doğru tespitler>","missed":"<kaçırılanlar>","extra":"<yanlış/fazlalar>","summary":"<öğrenme özeti>"}}
+
+AI YORUMU:
+{ai_text}
+
+UZMAN RAPORU:
+{expert_text}"""
+        }],
+        "max_tokens": 500
     }
     async with httpx.AsyncClient(timeout=60) as c:
-        r = await c.post(f"{GEMINI_URL}?key={GEMINI_API_KEY}", json=payload)
+        r = await c.post(
+            OPENROUTER_URL,
+            json=payload,
+            headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}", "Content-Type": "application/json"}
+        )
     if r.status_code != 200:
-        raise HTTPException(502, f"Gemini hatası: {r.text[:200]}")
-    raw = r.json()["candidates"][0]["content"]["parts"][0]["text"]
+        raise HTTPException(502, f"API hatası: {r.text[:200]}")
+    raw = r.json()["choices"][0]["message"]["content"]
     clean = re.sub(r"```json|```", "", raw).strip()
     try: return json.loads(clean)
     except: return {"score": 50, "matched": "—", "missed": "—", "extra": "—", "summary": clean[:200]}
@@ -176,73 +223,6 @@ async def ping(username: str = Depends(verify_auth)):
 static_dir = Path(__file__).parent
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
-@app.post("/api/series")
-async def series_analyze(
-    files: list[UploadFile] = File(...),
-    cases_json: str = Form(default="[]"),
-    username: str = Depends(verify_auth)
-):
-    try: cases = json.loads(cases_json)
-    except: cases = []
-
-    # Tüm dosyaları oku
-    all_files = []
-    for f in files:
-        data = await f.read()
-        all_files.append((f.filename or "kesit", data))
-
-    total = len(all_files)
-
-    # Akıllı örnekleme: max 20 kesit seç
-    MAX_SAMPLES = 20
-    if total <= MAX_SAMPLES:
-        sampled = all_files
-    else:
-        step = total / MAX_SAMPLES
-        sampled = [all_files[int(i * step)] for i in range(MAX_SAMPLES)]
-
-    # PNG'ye çevir
-    images_b64 = []
-    for fname, data in sampled:
-        try:
-            png = to_png(data, fname)
-            images_b64.append(base64.b64encode(png).decode())
-        except:
-            continue
-
-    # Tek Gemini isteği — tüm görüntüler birlikte
-    system = build_prompt(cases) + f"""
-
-Bu istek {total} kesitlik bir CT serisinden sistematik örnekleme ile seçilmiş {len(images_b64)} temsili kesiti içermektedir.
-Tüm kesimleri bütünsel olarak değerlendir, TEK kapsamlı radyoloji raporu yaz."""
-
-    parts = []
-    for b64 in images_b64:
-        parts.append({"inline_data": {"mime_type": "image/png", "data": b64}})
-    parts.append({"text": f"Bu {len(images_b64)} CT kesitini bütünsel olarak değerlendirerek tek kapsamlı radyoloji raporu yaz."})
-
-    payload = {
-        "system_instruction": {"parts": [{"text": system}]},
-        "contents": [{"parts": parts}],
-        "generationConfig": {"maxOutputTokens": 2000, "temperature": 0.2}
-    }
-
-    async with httpx.AsyncClient(timeout=180) as c:
-        r = await c.post(f"{GEMINI_URL}?key={GEMINI_API_KEY}", json=payload)
-
-    if r.status_code != 200:
-        raise HTTPException(502, f"Gemini hatası: {r.text[:300]}")
-
-    try:
-        result = r.json()["candidates"][0]["content"]["parts"][0]["text"]
-    except:
-        raise HTTPException(502, "Yanıt ayrıştırılamadı")
-
-    return {
-        "report": result,
-        "total_files": total,
-        "sampled": len(images_b64)
-    }
 @app.get("/")
 async def root():
     return FileResponse(str(static_dir / "index.html"))
