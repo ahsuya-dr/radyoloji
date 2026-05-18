@@ -174,7 +174,7 @@ async def series_analyze(files: list[UploadFile] = File(...), cases_json: str = 
         all_data.append((f.filename or "kesit", data))
 
     total = len(all_data)
-    MAX_SAMPLES = 15
+    MAX_SAMPLES = 4
     if total <= MAX_SAMPLES:
         sampled = all_data
     else:
