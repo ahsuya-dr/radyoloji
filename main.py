@@ -23,7 +23,7 @@ OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 APP_PASSWORD       = os.environ.get("APP_PASSWORD", "ct1234")
 APP_USERNAME       = os.environ.get("APP_USERNAME", "doktor")
 OPENROUTER_URL     = "https://openrouter.ai/api/v1/chat/completions"
-MODEL = "qwen/qwen2.5-vl-72b-instruct:free"
+MODEL = "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
 
 def verify_auth(credentials: HTTPBasicCredentials = Depends(security)):
     ok_user = secrets.compare_digest(credentials.username, APP_USERNAME)
