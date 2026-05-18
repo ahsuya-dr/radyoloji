@@ -23,7 +23,7 @@ OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 APP_PASSWORD       = os.environ.get("APP_PASSWORD", "ct1234")
 APP_USERNAME       = os.environ.get("APP_USERNAME", "doktor")
 OPENROUTER_URL     = "https://openrouter.ai/api/v1/chat/completions"
-MODEL = "openrouter/free"
+MODEL = "google/gemma-3-27b-it:free"
 
 def verify_auth(credentials: HTTPBasicCredentials = Depends(security)):
     ok_user = secrets.compare_digest(credentials.username, APP_USERNAME)
