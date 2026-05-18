@@ -586,7 +586,7 @@ document.getElementById('compareBtn').addEventListener('click', async () => {
 
 // ── RENDER ─────────────────────────────────────────────
 function formatAI(txt) {
-  return txt
+  if (!txt) return '<span style="color:var(--t2)">Yanıt alınamadı</span>';  return txt
     .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
     .replace(/^#{1,3}\s(.+)$/gm,'<h3>$1</h3>')
     .replace(/^[-•]\s(.+)$/gm,'<li>$1</li>')
