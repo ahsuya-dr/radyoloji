@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CT Analiz · Radyoloji Platformu</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -18,9 +17,6 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
 body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.6}
-body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
-  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(61,232,192,.012) 3px,rgba(61,232,192,.012) 4px)}
-
 .shell{display:grid;grid-template-rows:52px 1fr;height:100vh;overflow:hidden}
 .topbar{background:var(--s1);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:16px;justify-content:space-between}
 .logo{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--text)}
@@ -30,107 +26,75 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 .pill{background:var(--s2);border:1px solid var(--border);border-radius:20px;padding:3px 12px;font-family:var(--mono);font-size:10px;color:var(--t2);display:flex;align-items:center;gap:6px}
 .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:blink 2s infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
-
-.content{display:grid;grid-template-columns:420px 1fr;overflow:hidden}
+.content{display:grid;grid-template-columns:380px 1fr;overflow:hidden}
 .left{background:var(--s1);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
-.panel-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-.panel-title{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--t2);display:flex;align-items:center;gap:8px}
-.panel-title span{color:var(--accent);font-size:14px}
-.left-body{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:14px}
-
-/* MODE TOGGLE */
+.panel-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.panel-title{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--t2)}
+.left-body{flex:1;overflow-y:auto;padding:14px 18px;display:flex;flex-direction:column;gap:12px}
 .mode-toggle{display:flex;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:3px;gap:2px}
 .mode-btn{flex:1;padding:7px;border-radius:6px;border:none;background:none;cursor:pointer;font-family:var(--sans);font-size:12px;font-weight:500;color:var(--t2);transition:all .15s;text-align:center}
 .mode-btn.on{background:var(--bg);color:var(--accent);border:1px solid var(--border)}
-
-/* DROP ZONE */
-.dropzone{border:1.5px dashed var(--border2);border-radius:10px;background:var(--s2);padding:28px 20px;text-align:center;cursor:pointer;position:relative;overflow:hidden;transition:border-color .2s,background .2s}
-.dropzone::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% -10%,rgba(61,232,192,.06) 0%,transparent 70%)}
+.dropzone{border:1.5px dashed var(--border2);border-radius:10px;background:var(--s2);padding:24px 16px;text-align:center;cursor:pointer;position:relative;transition:border-color .2s}
 .dropzone:hover,.dropzone.over{border-color:var(--accent);background:rgba(61,232,192,.04)}
 .dropzone input{position:absolute;inset:0;opacity:0;cursor:pointer}
-.dz-icon{font-size:32px;margin-bottom:8px;opacity:.5}
+.dz-icon{font-size:28px;margin-bottom:8px;opacity:.5}
 .dz-label{font-size:12px;color:var(--t2)}
 .dz-label strong{color:var(--accent);display:block;font-size:14px;margin-bottom:3px}
-.format-row{display:flex;gap:5px;justify-content:center;margin-top:10px;flex-wrap:wrap}
-.ftag{background:var(--s3);border:1px solid var(--border2);border-radius:4px;padding:2px 7px;font-family:var(--mono);font-size:9px;color:var(--t3)}
-
-/* PREVIEW */
-.preview-wrap{display:none;border-radius:10px;overflow:hidden;background:#000;position:relative;aspect-ratio:1;max-height:260px}
+.format-row{display:flex;gap:4px;justify-content:center;margin-top:8px;flex-wrap:wrap}
+.ftag{background:var(--s3);border:1px solid var(--border2);border-radius:4px;padding:2px 6px;font-family:var(--mono);font-size:9px;color:var(--t3)}
+.preview-wrap{display:none;border-radius:8px;overflow:hidden;background:#000;position:relative;aspect-ratio:1;max-height:240px}
 .preview-wrap img{width:100%;height:100%;object-fit:contain}
-.preview-bar{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.85));padding:10px;font-family:var(--mono);font-size:9px;color:var(--accent);display:flex;justify-content:space-between}
-
-/* BATCH FILE LIST */
-.batch-list{background:var(--s2);border:1px solid var(--border);border-radius:8px;max-height:220px;overflow-y:auto}
-.batch-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px}
+.preview-bar{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.85));padding:8px;font-family:var(--mono);font-size:9px;color:var(--accent);display:flex;justify-content:space-between}
+.batch-list{background:var(--s2);border:1px solid var(--border);border-radius:8px;max-height:200px;overflow-y:auto}
+.batch-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid var(--border);font-size:12px}
 .batch-item:last-child{border-bottom:none}
 .bi-name{flex:1;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bi-size{font-family:var(--mono);font-size:10px;color:var(--t3);min-width:48px;text-align:right}
-.bi-status{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0}
+.bi-status{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0}
 .bi-wait{background:var(--s3);color:var(--t3)}
-.bi-loading{background:rgba(61,232,192,.15);color:var(--accent);animation:blink 1s infinite}
+.bi-spin{background:rgba(61,232,192,.15);color:var(--accent);animation:blink 1s infinite}
 .bi-ok{background:rgba(61,235,160,.15);color:var(--ok)}
 .bi-err{background:rgba(255,79,106,.15);color:var(--bad)}
-
-/* BATCH PROGRESS */
-.batch-progress{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:14px}
-.bp-label{font-family:var(--mono);font-size:10px;color:var(--t2);margin-bottom:8px;display:flex;justify-content:space-between}
-.bp-track{height:6px;background:var(--border);border-radius:3px;overflow:hidden}
-.bp-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:3px;transition:width .4s ease;width:0%}
-
-/* SCANLINE LOADER */
-.scanline-loader{height:2px;background:var(--border);border-radius:2px;overflow:hidden;display:none}
-.scanline-loader.on{display:block}
-.scanline-loader::after{content:'';display:block;height:100%;width:35%;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:sweep 1.4s infinite}
-@keyframes sweep{0%{transform:translateX(-200%)}100%{transform:translateX(500%)}}
-
-/* BUTTONS */
-.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:7px;border:none;cursor:pointer;font-family:var(--sans);font-size:13px;font-weight:500;transition:all .15s}
+.progress-box{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:12px}
+.pb-label{font-family:var(--mono);font-size:10px;color:var(--t2);margin-bottom:6px;display:flex;justify-content:space-between}
+.pb-track{height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.pb-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:3px;transition:width .4s ease;width:0%}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:9px 16px;border-radius:7px;border:none;cursor:pointer;font-family:var(--sans);font-size:13px;font-weight:500;transition:all .15s;width:100%}
 .btn-accent{background:var(--accent);color:var(--bg)}
-.btn-accent:hover{filter:brightness(1.1);transform:translateY(-1px)}
-.btn-accent:disabled{background:var(--t3);cursor:not-allowed;transform:none;filter:none}
-.btn-ghost{background:var(--s2);color:var(--t2);border:1px solid var(--border2);font-size:11px;padding:6px 12px}
-.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn-accent:hover{filter:brightness(1.1)}
+.btn-accent:disabled{background:var(--t3);cursor:not-allowed}
 .btn-blue{background:var(--accent2);color:var(--bg)}
-.btn-blue:hover{filter:brightness(1.1);transform:translateY(-1px)}
-.btn-blue:disabled{background:var(--t3);cursor:not-allowed;transform:none;filter:none}
-.action-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.status-txt{font-family:var(--mono);font-size:10px;color:var(--t3)}
-
-/* RIGHT */
+.btn-blue:hover{filter:brightness(1.1)}
+.btn-blue:disabled{background:var(--t3);cursor:not-allowed}
+.btn-ghost{background:var(--s2);color:var(--t2);border:1px solid var(--border2);font-size:11px;padding:6px 12px;width:auto}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn-sm{width:auto;padding:6px 12px;font-size:11px}
 .right{display:flex;flex-direction:column;overflow:hidden}
 .tabbar{background:var(--s1);border-bottom:1px solid var(--border);display:flex;gap:2px;padding:8px 20px 0}
-.tab{padding:8px 16px;border-radius:7px 7px 0 0;border:none;background:none;cursor:pointer;font-family:var(--sans);font-size:12px;font-weight:500;color:var(--t2);border-bottom:2px solid transparent;transition:all .15s}
+.tab{padding:8px 14px;border-radius:7px 7px 0 0;border:none;background:none;cursor:pointer;font-family:var(--sans);font-size:12px;font-weight:500;color:var(--t2);border-bottom:2px solid transparent;transition:all .15s}
 .tab.on{color:var(--accent);border-bottom-color:var(--accent)}
 .tab-panels{flex:1;overflow:hidden;display:flex;flex-direction:column}
 .tp{display:none;flex:1;overflow-y:auto;padding:20px;flex-direction:column;gap:14px}
 .tp.on{display:flex}
-
-/* AI OUTPUT */
-.ai-card{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:18px;font-size:13px;line-height:1.75;min-height:180px;position:relative}
+.ai-card{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:18px;font-size:13px;line-height:1.75;min-height:160px;position:relative}
 .ai-card .empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;color:var(--t3);text-align:center}
 .ai-card h3{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--border)}
 .ai-card h3:first-child{margin-top:0}
 .ai-card p{margin-bottom:6px}
 .ai-card ul{padding-left:18px}
 .ai-card li{margin-bottom:3px}
-
-/* BATCH RESULTS */
+.series-badge{font-family:var(--mono);font-size:10px;color:var(--accent);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);letter-spacing:.05em}
 .batch-result-item{background:var(--s1);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:8px}
 .bri-header{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;transition:background .15s}
 .bri-header:hover{background:var(--s2)}
 .bri-name{flex:1;font-size:13px;font-weight:500}
-.bri-badge{font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:4px}
-.bri-ok{background:rgba(61,235,160,.12);color:var(--ok)}
-.bri-err{background:rgba(255,79,106,.1);color:var(--bad)}
-.bri-body{display:none;padding:14px;border-top:1px solid var(--border);font-size:12px;line-height:1.65;color:var(--text)}
+.bri-ok{background:rgba(61,235,160,.12);color:var(--ok);font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:4px}
+.bri-err{background:rgba(255,79,106,.1);color:var(--bad);font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:4px}
+.bri-body{display:none;padding:14px;border-top:1px solid var(--border);font-size:12px;line-height:1.65}
 .bri-body.open{display:block}
-
-/* EXPERT */
 .expert-area{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:14px;color:var(--text);font-family:var(--sans);font-size:13px;line-height:1.6;resize:vertical;min-height:160px;outline:none;transition:border-color .2s}
 .expert-area:focus{border-color:var(--accent2)}
-.section-label{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--t2);margin-bottom:6px;display:block}
-
-/* COMPARE */
+.slabel{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--t2);margin-bottom:6px;display:block}
 .score-card{background:var(--s2);border:1px solid var(--border2);border-radius:10px;padding:18px;text-align:center}
 .score-lbl{font-family:var(--mono);font-size:10px;color:var(--t3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
 .score-num{font-family:var(--mono);font-size:42px;font-weight:700}
@@ -140,166 +104,109 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 .cmp-box{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:14px}
 .cmp-box h4{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
 .cmp-box p{font-size:12px;color:var(--t2);line-height:1.55}
-.cmp-ok h4{color:var(--ok)} .cmp-miss h4{color:var(--bad)} .cmp-miss p{color:var(--bad)}
-.cmp-warn h4{color:var(--warn)}
-.cmp-learn{border-color:rgba(61,232,192,.25);background:rgba(61,232,192,.04)}
-.cmp-learn h4{color:var(--accent)}
-
-/* CASES */
-.case-row{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:12px 16px;display:grid;grid-template-columns:44px 1fr auto 72px;align-items:center;gap:12px;transition:border-color .15s}
-.case-row:hover{border-color:var(--border2)}
+.cmp-ok h4{color:var(--ok)}.cmp-miss h4{color:var(--bad)}.cmp-miss p{color:var(--bad)}
+.cmp-warn h4{color:var(--warn)}.cmp-learn{border-color:rgba(61,232,192,.25);background:rgba(61,232,192,.04)}.cmp-learn h4{color:var(--accent)}
+.case-row{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:grid;grid-template-columns:40px 1fr auto 70px;align-items:center;gap:10px;margin-bottom:6px}
 .case-n{font-family:var(--mono);font-size:10px;color:var(--t3)}
 .case-info strong{display:block;font-size:13px;color:var(--text)}
 .case-info span{font-size:11px;color:var(--t2)}
 .case-score{font-family:var(--mono);font-size:11px;padding:3px 9px;border-radius:5px}
-.cs-hi{background:rgba(61,235,160,.12);color:var(--ok)}
-.cs-md{background:rgba(255,213,0,.1);color:#ffd500}
-.cs-lo{background:rgba(255,79,106,.1);color:var(--bad)}
+.cs-hi{background:rgba(61,235,160,.12);color:var(--ok)}.cs-md{background:rgba(255,213,0,.1);color:#ffd500}.cs-lo{background:rgba(255,79,106,.1);color:var(--bad)}
 .case-date{font-family:var(--mono);font-size:9px;color:var(--t3)}
 .empty-state{text-align:center;padding:48px 20px;font-family:var(--mono);font-size:11px;color:var(--t3);line-height:2}
-
-/* TOAST */
 .toast{position:fixed;bottom:22px;right:22px;background:var(--s2);border:1px solid var(--border2);border-radius:8px;padding:11px 16px;font-size:13px;display:flex;align-items:center;gap:9px;z-index:10000;transform:translateY(80px);opacity:0;transition:all .3s cubic-bezier(.22,1,.36,1)}
 .toast.show{transform:translateY(0);opacity:1}
-.toast.ok{border-color:var(--ok);color:var(--ok)}
-.toast.err{border-color:var(--bad);color:var(--bad)}
-::-webkit-scrollbar{width:3px}
-::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.toast.ok{border-color:var(--ok);color:var(--ok)}.toast.err{border-color:var(--bad);color:var(--bad)}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
 </style>
 </head>
 <body>
 <div class="shell">
   <header class="topbar">
-    <div class="logo">
-      <div class="logo-sq">CT</div>
-      RADYO<em>AI</em> &nbsp;·&nbsp; Görüntü Analiz
-    </div>
+    <div class="logo"><div class="logo-sq">CT</div>RADYO<em>AI</em> · Görüntü Analiz</div>
     <div class="topbar-right">
       <div class="pill"><div class="dot"></div><span id="casePill">0 Vaka</span></div>
       <div class="pill" id="avgPill">— Doğruluk</div>
       <button class="btn btn-ghost" id="logoutBtn">Çıkış</button>
     </div>
   </header>
-
   <div class="content">
-    <!-- LEFT -->
     <aside class="left">
       <div class="panel-head">
-        <div class="panel-title"><span>◈</span> Görüntü Yükle</div>
-        <button class="btn btn-ghost" id="clearBtn">Temizle</button>
+        <div class="panel-title">◈ Görüntü Yükle</div>
+        <button class="btn btn-ghost btn-sm" id="clearBtn">Temizle</button>
       </div>
       <div class="left-body">
-
-        <!-- Mode toggle -->
         <div class="mode-toggle">
           <button class="mode-btn on" id="modeSingle" onclick="setMode('single')">Tek Görüntü</button>
           <button class="mode-btn" id="modeBatch" onclick="setMode('batch')">Toplu Yükleme</button>
         </div>
 
-        <!-- SINGLE MODE -->
+        <!-- SINGLE -->
         <div id="singleMode">
           <div class="dropzone" id="dropZone">
-            <input type="file" id="fileInput" accept="image/*,.dcm,.mp4,.avi,.mov,.mkv,.webm" />
+            <input type="file" id="fileInput" accept="image/*,.dcm,.mp4,.avi,.mov,.mkv,.webm"/>
             <div class="dz-icon">⊕</div>
             <div class="dz-label"><strong>Dosya Seç veya Sürükle</strong>DICOM · Görüntü · Video</div>
-            <div class="format-row">
-              <span class="ftag">DCM</span><span class="ftag">PNG</span><span class="ftag">JPG</span>
-              <span class="ftag">MP4</span><span class="ftag">AVI</span><span class="ftag">MOV</span>
-            </div>
+            <div class="format-row"><span class="ftag">DCM</span><span class="ftag">PNG</span><span class="ftag">JPG</span><span class="ftag">MP4</span><span class="ftag">AVI</span></div>
           </div>
           <div class="preview-wrap" id="previewWrap">
-            <img id="previewImg" alt="önizleme" />
+            <img id="previewImg" alt="önizleme"/>
             <div class="preview-bar"><span id="prevName">—</span><span id="prevSize">—</span></div>
           </div>
-          <div class="scanline-loader" id="singleLoader"></div>
-          <div class="action-row">
-            <button class="btn btn-accent" id="analyzeBtn" disabled>⟳ Analiz Et</button>
-            <span class="status-txt" id="statusTxt"></span>
-          </div>
+          <button class="btn btn-accent" id="analyzeBtn" disabled>⟳ Analiz Et</button>
         </div>
 
-        <!-- BATCH MODE -->
+        <!-- BATCH -->
         <div id="batchMode" style="display:none">
           <div class="dropzone" id="batchDrop">
-            <input type="file" id="batchInput" accept="image/*,.dcm,.mp4,.avi,.mov,.mkv,.webm" multiple />
+            <input type="file" id="batchInput" accept="image/*,.dcm,.mp4,.avi,.mov,.mkv,.webm" multiple/>
             <div class="dz-icon">⊞</div>
             <div class="dz-label"><strong>Birden Fazla Dosya Seç</strong>Sınırsız sayıda görüntü</div>
-            <div class="format-row">
-              <span class="ftag">DCM</span><span class="ftag">PNG</span><span class="ftag">JPG</span>
-              <span class="ftag">MP4</span><span class="ftag">AVI</span><span class="ftag">MOV</span>
-            </div>
+            <div class="format-row"><span class="ftag">DCM</span><span class="ftag">PNG</span><span class="ftag">JPG</span><span class="ftag">MP4</span></div>
           </div>
-
           <div id="batchFileList" style="display:none">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-              <span class="section-label" style="margin:0" id="batchCount">0 dosya seçildi</span>
-            </div>
+            <div style="font-family:var(--mono);font-size:10px;color:var(--t2);margin-bottom:6px" id="batchCount">0 dosya</div>
             <div class="batch-list" id="batchItems"></div>
           </div>
-
-          <div class="batch-progress" id="batchProgress" style="display:none">
-            <div class="bp-label">
-              <span id="bpText">Hazırlanıyor...</span>
-              <span id="bpNum">0 / 0</span>
-            </div>
-            <div class="bp-track"><div class="bp-fill" id="bpFill"></div></div>
+          <div class="progress-box" id="progressBox" style="display:none">
+            <div class="pb-label"><span id="pbText">Hazırlanıyor...</span><span id="pbNum">0/0</span></div>
+            <div class="pb-track"><div class="pb-fill" id="pbFill"></div></div>
           </div>
-
-          <div class="action-row">
-            <button class="btn btn-accent" id="batchBtn" disabled>⟳ Toplu Analiz Başlat</button>
-            <button class="btn btn-blue" id="seriesBtn" disabled style="margin-top:8px;width:100%">⬡ Seri Analizi (Tek Rapor)</button>
-            <button class="btn btn-blue" id="seriesBtn" disabled>⬡ Seri Analizi (Tek Rapor)</button>
-            <button class="btn btn-ghost" id="batchStopBtn" style="display:none">■ Durdur</button>
-            <span class="status-txt" id="batchStatus"></span>
-          </div>
+          <button class="btn btn-accent" id="batchBtn" disabled style="margin-bottom:8px">⟳ Toplu Analiz Başlat</button>
+          <button class="btn btn-blue" id="seriesBtn" disabled>⬡ Seri Analizi (Tek Rapor)</button>
+          <button class="btn btn-ghost" id="stopBtn" style="display:none;margin-top:6px">■ Durdur</button>
         </div>
-
       </div>
     </aside>
 
-    <!-- RIGHT -->
     <main class="right">
       <nav class="tabbar">
         <button class="tab on" onclick="goTab('analysis')">AI Analizi</button>
-        <button class="tab" onclick="goTab('batch-results')">Toplu Sonuçlar</button>
+        <button class="tab" onclick="goTab('batch')">Toplu Sonuçlar</button>
         <button class="tab" onclick="goTab('expert')">Uzman Raporu</button>
         <button class="tab" onclick="goTab('compare')">Karşılaştırma</button>
         <button class="tab" onclick="goTab('history')">Geçmiş</button>
       </nav>
       <div class="tab-panels">
-
         <div class="tp on" id="tp-analysis">
-          <div class="ai-card" id="mainAiCard">
-            <div class="empty">▸ Görüntü yükleyin ve Analiz Et butonuna basın</div>
-          </div>
+          <div class="ai-card" id="mainCard"><div class="empty">▸ Görüntü yükleyin ve Analiz Et butonuna basın</div></div>
         </div>
-
-        <div class="tp" id="tp-batch-results">
-          <div id="batchResultsList">
-            <div class="empty-state">Toplu analiz sonuçları burada görünecek</div>
-          </div>
+        <div class="tp" id="tp-batch">
+          <div id="batchResults"><div class="empty-state">Toplu analiz sonuçları burada görünecek</div></div>
         </div>
-
         <div class="tp" id="tp-expert">
-          <label class="section-label">Uzman Doktor Raporu</label>
+          <label class="slabel">Uzman Doktor Raporu</label>
           <textarea class="expert-area" id="expertTxt" placeholder="Uzman raporunu buraya girin..."></textarea>
-          <div class="action-row">
-            <button class="btn btn-blue" id="compareBtn" disabled>Karşılaştır & Kaydet</button>
-            <span class="status-txt" id="cmpStatus"></span>
-          </div>
+          <button class="btn btn-blue" id="compareBtn" disabled style="width:auto">Karşılaştır & Kaydet</button>
         </div>
-
         <div class="tp" id="tp-compare">
           <div id="cmpResult"><div class="empty-state">Henüz karşılaştırma yapılmadı</div></div>
         </div>
-
         <div class="tp" id="tp-history">
-          <div style="display:flex;justify-content:flex-end;margin-bottom:4px">
-            <button class="btn btn-ghost" id="clearDataBtn">Tümünü Sil</button>
-          </div>
+          <div style="display:flex;justify-content:flex-end"><button class="btn btn-ghost btn-sm" id="clearDataBtn">Tümünü Sil</button></div>
           <div id="casesList"></div>
         </div>
-
       </div>
     </main>
   </div>
@@ -307,36 +214,68 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 <div class="toast" id="toast"></div>
 
 <script>
-// ── STATE ──────────────────────────────────────────────
 let currentFile = null;
-let currentAI   = null;
+let currentAI = null;
+let batchFiles = [];
+let stopFlag = false;
 let cases = JSON.parse(localStorage.getItem('rtCases') || '[]');
-let batchFiles  = [];
-let batchStop   = false;
-let currentMode = 'single';
 
-// ── MODE ───────────────────────────────────────────────
+// TABS
+function goTab(id) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('on', ['analysis','batch','expert','compare','history'][i] === id);
+  });
+  document.querySelectorAll('.tp').forEach(p => p.classList.remove('on'));
+  document.getElementById('tp-' + id).classList.add('on');
+}
+
+// MODE
 function setMode(m) {
-  currentMode = m;
   document.getElementById('modeSingle').classList.toggle('on', m==='single');
   document.getElementById('modeBatch').classList.toggle('on', m==='batch');
   document.getElementById('singleMode').style.display = m==='single' ? 'block' : 'none';
-  document.getElementById('batchMode').style.display  = m==='batch'  ? 'block' : 'none';
+  document.getElementById('batchMode').style.display = m==='batch' ? 'block' : 'none';
 }
 
-// ── TABS ───────────────────────────────────────────────
-function goTab(id) {
-  document.querySelectorAll('.tab').forEach((t,i) => {
-    const ids = ['analysis','batch-results','expert','compare','history'];
-    t.classList.toggle('on', ids[i]===id);
+// COMPRESS
+function compressImage(file) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 1024;
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        canvas.toBlob(resolve, 'image/jpeg', 0.82);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
   });
-  document.querySelectorAll('.tp').forEach(p=>p.classList.remove('on'));
-  document.getElementById('tp-'+id).classList.add('on');
 }
 
-// ── SINGLE FILE ────────────────────────────────────────
+// FORMAT
+function formatAI(txt) {
+  if (!txt || typeof txt !== 'string') return '<span style="color:var(--t2)">Yanıt alınamadı</span>';
+  return txt
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^#{1,3}\s(.+)$/gm, '<h3>$1</h3>')
+    .replace(/^[-•]\s(.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*?<\/li>)/gs, '<ul>$1</ul>')
+    .replace(/\n\n/g, '<br/><br/>')
+    .replace(/\n/g, '<br/>');
+}
+
+// SINGLE FILE
 const fileInput = document.getElementById('fileInput');
-const dropZone  = document.getElementById('dropZone');
+const dropZone = document.getElementById('dropZone');
 
 function handleFile(file) {
   if (!file) return;
@@ -354,195 +293,192 @@ function handleFile(file) {
     dropZone.style.display = 'none';
   }
   document.getElementById('prevName').textContent = file.name;
-  document.getElementById('prevSize').textContent = (file.size/1048576).toFixed(1)+' MB';
+  document.getElementById('prevSize').textContent = (file.size/1048576).toFixed(1) + ' MB';
   document.getElementById('analyzeBtn').disabled = false;
   currentAI = null;
   document.getElementById('compareBtn').disabled = true;
-  document.getElementById('mainAiCard').innerHTML = '<div class="empty">▸ Analiz Et butonuna basın</div>';
+  document.getElementById('mainCard').innerHTML = '<div class="empty">▸ Analiz Et butonuna basın</div>';
 }
 
-fileInput.addEventListener('change', e=>handleFile(e.target.files[0]));
-dropZone.addEventListener('dragover', e=>{e.preventDefault();dropZone.classList.add('over')});
-dropZone.addEventListener('dragleave', ()=>dropZone.classList.remove('over'));
-dropZone.addEventListener('drop', e=>{e.preventDefault();dropZone.classList.remove('over');handleFile(e.dataTransfer.files[0])});
+fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('over'); handleFile(e.dataTransfer.files[0]); });
 
 document.getElementById('analyzeBtn').addEventListener('click', async () => {
   if (!currentFile) return;
-  document.getElementById('analyzeBtn').disabled = true;
-  document.getElementById('singleLoader').classList.add('on');
-  document.getElementById('statusTxt').textContent = 'analiz ediliyor...';
-
-  const fd = new FormData();
-  fd.append('file', currentFile);
-  fd.append('cases_json', JSON.stringify(cases));
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = true;
+  btn.textContent = '⟳ Analiz ediliyor...';
   try {
-    const r = await fetch('/api/analyze', {method:'POST', body:fd, credentials:'include'});
+    const blob = await compressImage(currentFile);
+    const fd = new FormData();
+    fd.append('file', blob, currentFile.name.replace(/\.[^.]+$/, '.jpg'));
+    fd.append('cases_json', JSON.stringify(cases));
+    const r = await fetch('/api/analyze', { method: 'POST', body: fd, credentials: 'include' });
     const d = await r.json();
-    if (!r.ok) throw new Error(d.detail||'Hata');
+    if (!r.ok) throw new Error(d.detail || 'Hata');
     currentAI = d.analysis;
-    renderAI(d.analysis);
+    document.getElementById('mainCard').innerHTML = formatAI(d.analysis);
     document.getElementById('compareBtn').disabled = false;
     goTab('analysis');
   } catch(e) {
-    toast('Hata: '+e.message, 'err');
+    toast('Hata: ' + e.message, 'err');
   } finally {
-    document.getElementById('analyzeBtn').disabled = false;
-    document.getElementById('singleLoader').classList.remove('on');
-    document.getElementById('statusTxt').textContent = '';
+    btn.disabled = false;
+    btn.textContent = '⟳ Analiz Et';
   }
 });
 
-// ── BATCH ──────────────────────────────────────────────
+// BATCH FILES
 const batchInput = document.getElementById('batchInput');
-const batchDrop  = document.getElementById('batchDrop');
+const batchDrop = document.getElementById('batchDrop');
 
 function handleBatchFiles(files) {
   batchFiles = Array.from(files);
   if (!batchFiles.length) return;
   document.getElementById('batchCount').textContent = batchFiles.length + ' dosya seçildi';
   document.getElementById('batchFileList').style.display = 'block';
-  const container = document.getElementById('batchItems');
-  container.innerHTML = batchFiles.map((f,i) => `
-    <div class="batch-item" id="bi-${i}">
-      <div class="bi-status bi-wait" id="bis-${i}">○</div>
-      <div class="bi-name">${f.name}</div>
-      <div class="bi-size">${(f.size/1048576).toFixed(1)} MB</div>
-    </div>
-  `).join('');
+  document.getElementById('batchItems').innerHTML = batchFiles.map((f, i) =>
+    `<div class="batch-item"><div class="bi-status bi-wait" id="bis-${i}">○</div><div class="bi-name">${f.name}</div><div class="bi-size">${(f.size/1048576).toFixed(1)} MB</div></div>`
+  ).join('');
   document.getElementById('batchBtn').disabled = false;
   document.getElementById('seriesBtn').disabled = false;
-  document.getElementById('batchResultsList').innerHTML = '<div class="empty-state">Analiz başlatıldığında sonuçlar burada görünecek</div>';
 }
 
-batchInput.addEventListener('change', e=>handleBatchFiles(e.target.files));
-batchDrop.addEventListener('dragover', e=>{e.preventDefault();batchDrop.classList.add('over')});
-batchDrop.addEventListener('dragleave', ()=>batchDrop.classList.remove('over'));
-batchDrop.addEventListener('drop', e=>{e.preventDefault();batchDrop.classList.remove('over');handleBatchFiles(e.dataTransfer.files)});
+batchInput.addEventListener('change', e => handleBatchFiles(e.target.files));
+batchDrop.addEventListener('dragover', e => { e.preventDefault(); batchDrop.classList.add('over'); });
+batchDrop.addEventListener('dragleave', () => batchDrop.classList.remove('over'));
+batchDrop.addEventListener('drop', e => { e.preventDefault(); batchDrop.classList.remove('over'); handleBatchFiles(e.dataTransfer.files); });
 
-
-// ── IMAGE COMPRESSION ──────────────────────────────────
-function compressImage(file) {
-  return new Promise((resolve) => {
-    const MAX = 1200; // max width/height px
-    const QUALITY = 0.85;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        let w = img.width, h = img.height;
-        if (w > MAX || h > MAX) {
-          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-          else { w = Math.round(w * MAX / h); h = MAX; }
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        canvas.toBlob(resolve, 'image/jpeg', QUALITY);
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
+// TOPLU ANALİZ
 document.getElementById('batchBtn').addEventListener('click', async () => {
   if (!batchFiles.length) return;
-  batchStop = false;
+  stopFlag = false;
   document.getElementById('batchBtn').disabled = true;
-  document.getElementById('batchStopBtn').style.display = 'inline-flex';
-  document.getElementById('batchProgress').style.display = 'block';
-  document.getElementById('batchResultsList').innerHTML = '';
-  goTab('batch-results');
+  document.getElementById('seriesBtn').disabled = true;
+  document.getElementById('stopBtn').style.display = 'block';
+  document.getElementById('progressBox').style.display = 'block';
+  document.getElementById('batchResults').innerHTML = '';
+  goTab('batch');
 
   const total = batchFiles.length;
   let done = 0;
 
   for (let i = 0; i < batchFiles.length; i++) {
-    if (batchStop) break;
+    if (stopFlag) break;
     const f = batchFiles[i];
-    const fname = f.name;
-
-    // Update status: loading
     const bisEl = document.getElementById(`bis-${i}`);
-    if (bisEl) { bisEl.className='bi-status bi-loading'; bisEl.textContent='⟳'; }
-    document.getElementById('bpText').textContent = `İşleniyor: ${fname}`;
-    document.getElementById('bpNum').textContent = `${done} / ${total}`;
+    if (bisEl) { bisEl.className = 'bi-status bi-spin'; bisEl.textContent = '⟳'; }
+    document.getElementById('pbText').textContent = 'İşleniyor: ' + f.name;
+    document.getElementById('pbNum').textContent = done + '/' + total;
 
-    // Retry loop for quota
-    let success = false;
+    let ok = false;
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         const blob = await compressImage(f);
         const fd = new FormData();
         fd.append('file', blob, f.name.replace(/\.[^.]+$/, '.jpg'));
         fd.append('cases_json', JSON.stringify(cases));
-        const r = await fetch('/api/analyze', {method:'POST', body:fd, credentials:'include'});
+        const r = await fetch('/api/analyze', { method: 'POST', body: fd, credentials: 'include' });
         const d = await r.json();
-        if (!r.ok) throw new Error(d.detail||'Hata');
-
+        if (!r.ok) throw new Error(d.detail || 'Hata');
         done++;
-        if (bisEl) { bisEl.className='bi-status bi-ok'; bisEl.textContent='✓'; }
-        const pct = Math.round((done/total)*100);
-        document.getElementById('bpFill').style.width = pct+'%';
-        document.getElementById('bpNum').textContent = `${done} / ${total}`;
-        addBatchResult(i, {filename:fname, status:'ok', analysis:d.analysis});
-        success = true;
+        if (bisEl) { bisEl.className = 'bi-status bi-ok'; bisEl.textContent = '✓'; }
+        document.getElementById('pbFill').style.width = Math.round(done/total*100) + '%';
+        document.getElementById('pbNum').textContent = done + '/' + total;
+        addBatchCard(i, f.name, 'ok', d.analysis);
+        ok = true;
         break;
       } catch(e) {
         if (e.message.includes('QUOTA') && attempt < 2) {
-          document.getElementById('bpText').textContent = `Kota doldu, 65 sn bekleniyor... (${fname})`;
+          document.getElementById('pbText').textContent = 'Kota doldu, bekleniyor...';
           await new Promise(res => setTimeout(res, 65000));
         } else {
           done++;
-          if (bisEl) { bisEl.className='bi-status bi-err'; bisEl.textContent='✗'; }
-          const pct = Math.round((done/total)*100);
-          document.getElementById('bpFill').style.width = pct+'%';
-          addBatchResult(i, {filename:fname, status:'error', error:e.message});
+          if (bisEl) { bisEl.className = 'bi-status bi-err'; bisEl.textContent = '✗'; }
+          document.getElementById('pbFill').style.width = Math.round(done/total*100) + '%';
+          addBatchCard(i, f.name, 'err', e.message);
           break;
         }
       }
     }
-
-    // 4.5 sn ara (Gemini 15 req/min limiti)
-    if (i < batchFiles.length - 1 && !batchStop) {
-      await new Promise(res => setTimeout(res, 500));
-    }
+    if (i < batchFiles.length - 1 && !stopFlag) await new Promise(res => setTimeout(res, 500));
   }
 
   document.getElementById('batchBtn').disabled = false;
-  document.getElementById('batchStopBtn').style.display = 'none';
-  document.getElementById('bpText').textContent = batchStop ? 'Durduruldu' : 'Tamamlandı';
-  if (!batchStop) toast(`Toplu analiz tamamlandı · ${done} görüntü`, 'ok');
+  document.getElementById('seriesBtn').disabled = false;
+  document.getElementById('stopBtn').style.display = 'none';
+  document.getElementById('pbText').textContent = stopFlag ? 'Durduruldu' : 'Tamamlandı';
+  if (!stopFlag) toast('Toplu analiz tamamlandı · ' + batchFiles.length + ' görüntü', 'ok');
 });
 
-document.getElementById('batchStopBtn').addEventListener('click', () => {
-  batchStop = true;
-  toast('Durduruldu', 'ok');
+function addBatchCard(i, name, status, text) {
+  const el = document.createElement('div');
+  el.className = 'batch-result-item';
+  el.innerHTML = `<div class="bri-header" onclick="this.nextElementSibling.classList.toggle('open')">
+    <span class="bri-name">${name}</span>
+    <span class="${status==='ok'?'bri-ok':'bri-err'}">${status==='ok'?'✓ Analiz edildi':'✗ Hata'}</span>
+    <span style="color:var(--t3);font-size:12px;margin-left:8px">▾</span>
+  </div>
+  <div class="bri-body">${status==='ok' ? formatAI(text) : '<span style="color:var(--bad)">'+text+'</span>'}</div>`;
+  document.getElementById('batchResults').appendChild(el);
+}
+
+// SERİ ANALİZ
+document.getElementById('seriesBtn').addEventListener('click', async () => {
+  if (!batchFiles.length) return;
+  document.getElementById('seriesBtn').disabled = true;
+  document.getElementById('batchBtn').disabled = true;
+  document.getElementById('progressBox').style.display = 'block';
+  document.getElementById('pbText').textContent = 'Görüntüler hazırlanıyor...';
+  document.getElementById('pbFill').style.width = '10%';
+  goTab('analysis');
+  document.getElementById('mainCard').innerHTML = '<div class="empty">⟳ Seri analizi yapılıyor...</div>';
+
+  try {
+    const MAX = 15;
+    const total = batchFiles.length;
+    const sampled = total <= MAX ? batchFiles : Array.from({length: MAX}, (_, i) => batchFiles[Math.floor(i * total / MAX)]);
+
+    const fd = new FormData();
+    for (let i = 0; i < sampled.length; i++) {
+      document.getElementById('pbText').textContent = `Sıkıştırılıyor ${i+1}/${sampled.length}...`;
+      document.getElementById('pbFill').style.width = Math.round((i+1)/sampled.length*50) + '%';
+      const blob = await compressImage(sampled[i]);
+      fd.append('files', blob, sampled[i].name.replace(/\.[^.]+$/, '.jpg'));
+    }
+    fd.append('cases_json', JSON.stringify(cases));
+
+    document.getElementById('pbText').textContent = 'AI raporu oluşturuyor...';
+    document.getElementById('pbFill').style.width = '70%';
+
+    const r = await fetch('/api/series', { method: 'POST', body: fd, credentials: 'include' });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'Hata');
+
+    document.getElementById('pbFill').style.width = '100%';
+    document.getElementById('pbText').textContent = 'Tamamlandı';
+
+    const report = d.report || d.analysis || '';
+    document.getElementById('mainCard').innerHTML =
+      `<div class="series-badge">SERİ ANALİZİ · ${d.total_files} kesit → ${d.sampled} örnek seçildi</div>` +
+      formatAI(report);
+    currentAI = report;
+    document.getElementById('compareBtn').disabled = false;
+    toast('Seri raporu hazır · ' + d.total_files + ' kesit', 'ok');
+  } catch(e) {
+    document.getElementById('mainCard').innerHTML = '<div class="empty" style="color:var(--bad)">✗ ' + e.message + '</div>';
+    toast('Hata: ' + e.message, 'err');
+  } finally {
+    document.getElementById('seriesBtn').disabled = false;
+    document.getElementById('batchBtn').disabled = false;
+  }
 });
 
-function addBatchResult(i, data) {
-  const container = document.getElementById('batchResultsList');
-  const div = document.createElement('div');
-  div.className = 'batch-result-item';
-  div.innerHTML = `
-    <div class="bri-header" onclick="toggleBri(this)">
-      <span class="bri-name">${data.filename}</span>
-      <span class="bri-badge ${data.status==='ok'?'bri-ok':'bri-err'}">${data.status==='ok'?'✓ Analiz edildi':'✗ Hata'}</span>
-      <span style="color:var(--t3);font-size:12px;margin-left:8px">▾</span>
-    </div>
-    <div class="bri-body">
-      ${data.status==='ok' ? formatAI(data.analysis) : `<span style="color:var(--bad)">${data.error}</span>`}
-    </div>
-  `;
-  container.appendChild(div);
-}
+document.getElementById('stopBtn').addEventListener('click', () => { stopFlag = true; });
 
-function toggleBri(header) {
-  const body = header.nextElementSibling;
-  body.classList.toggle('open');
-}
-
-// ── CLEAR ──────────────────────────────────────────────
+// CLEAR
 document.getElementById('clearBtn').addEventListener('click', () => {
   currentFile = null; currentAI = null;
   fileInput.value = '';
@@ -551,56 +487,41 @@ document.getElementById('clearBtn').addEventListener('click', () => {
   document.getElementById('analyzeBtn').disabled = true;
   document.getElementById('compareBtn').disabled = true;
   document.getElementById('expertTxt').value = '';
-  document.getElementById('mainAiCard').innerHTML = '<div class="empty">▸ Görüntü yükleyin ve Analiz Et butonuna basın</div>';
-  document.getElementById('cmpResult').innerHTML = '<div class="empty-state">Henüz karşılaştırma yapılmadı</div>';
-  // reset batch
+  document.getElementById('mainCard').innerHTML = '<div class="empty">▸ Görüntü yükleyin ve Analiz Et butonuna basın</div>';
   batchFiles = [];
   batchInput.value = '';
   document.getElementById('batchFileList').style.display = 'none';
-  document.getElementById('batchProgress').style.display = 'none';
+  document.getElementById('progressBox').style.display = 'none';
   document.getElementById('batchBtn').disabled = true;
+  document.getElementById('seriesBtn').disabled = true;
 });
 
-// ── COMPARE ────────────────────────────────────────────
+// COMPARE
 document.getElementById('compareBtn').addEventListener('click', async () => {
   const expert = document.getElementById('expertTxt').value.trim();
   if (!expert || !currentAI) return;
-  document.getElementById('cmpStatus').textContent = 'değerlendiriliyor...';
-  document.getElementById('compareBtn').disabled = true;
-  const fd = new FormData();
-  fd.append('ai_text', currentAI);
-  fd.append('expert_text', expert);
+  const btn = document.getElementById('compareBtn');
+  btn.disabled = true;
+  btn.textContent = 'Değerlendiriliyor...';
   try {
-    const r = await fetch('/api/compare', {method:'POST', body:fd, credentials:'include'});
+    const fd = new FormData();
+    fd.append('ai_text', currentAI);
+    fd.append('expert_text', expert);
+    const r = await fetch('/api/compare', { method: 'POST', body: fd, credentials: 'include' });
     const d = await r.json();
-    if (!r.ok) throw new Error(d.detail||'Hata');
-    const nc = {id:Date.now(), date:new Date().toLocaleDateString('tr-TR'), ai:currentAI, expert, score:d.score, summary:d.summary};
+    if (!r.ok) throw new Error(d.detail || 'Hata');
+    const nc = { id: Date.now(), date: new Date().toLocaleDateString('tr-TR'), ai: currentAI, expert, score: d.score, summary: d.summary };
     cases.push(nc);
     localStorage.setItem('rtCases', JSON.stringify(cases));
     renderCmp(d); renderCases(); updateStats();
     goTab('compare');
-    toast(`Kaydedildi · Skor: ${d.score}/100`, 'ok');
-  } catch(e) { toast('Hata: '+e.message, 'err'); }
-  finally { document.getElementById('cmpStatus').textContent=''; document.getElementById('compareBtn').disabled=false; }
+    toast('Kaydedildi · Skor: ' + d.score + '/100', 'ok');
+  } catch(e) { toast('Hata: ' + e.message, 'err'); }
+  finally { btn.disabled = false; btn.textContent = 'Karşılaştır & Kaydet'; }
 });
 
-// ── RENDER ─────────────────────────────────────────────
-function formatAI(txt) {
-  if (!txt) return '<span style="color:var(--t2)">Yanıt alınamadı</span>';
-    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
-    .replace(/^#{1,3}\s(.+)$/gm,'<h3>$1</h3>')
-    .replace(/^[-•]\s(.+)$/gm,'<li>$1</li>')
-    .replace(/(<li>.*?<\/li>)/gs,'<ul>$1</ul>')
-    .replace(/\n\n/g,'<br/><br/>')
-    .replace(/\n/g,'<br/>');
-}
-
-function renderAI(txt) {
-  document.getElementById('mainAiCard').innerHTML = formatAI(txt);
-}
-
 function renderCmp(d) {
-  const color = d.score>=80?'var(--ok)':d.score>=60?'#ffd500':'var(--bad)';
+  const color = d.score >= 80 ? 'var(--ok)' : d.score >= 60 ? '#ffd500' : 'var(--bad)';
   document.getElementById('cmpResult').innerHTML = `
     <div class="score-card">
       <div class="score-lbl">AI Doğruluk Skoru</div>
@@ -611,17 +532,17 @@ function renderCmp(d) {
       <div class="cmp-box cmp-ok"><h4>✓ Doğru Tespitler</h4><p>${d.matched||'—'}</p></div>
       <div class="cmp-box cmp-miss"><h4>✗ Kaçırılan</h4><p>${d.missed||'—'}</p></div>
     </div>
-    ${d.extra?`<div class="cmp-box cmp-warn"><h4>⚠ Fazla/Yanlış</h4><p>${d.extra}</p></div>`:''}
+    ${d.extra ? `<div class="cmp-box cmp-warn"><h4>⚠ Fazla/Yanlış</h4><p>${d.extra}</p></div>` : ''}
     <div class="cmp-box cmp-learn"><h4>↑ Öğrenme Notu</h4><p>${d.summary||'—'}</p></div>`;
-  setTimeout(()=>{const sf=document.getElementById('sf');if(sf)sf.style.width=d.score+'%'},100);
+  setTimeout(() => { const sf = document.getElementById('sf'); if (sf) sf.style.width = d.score + '%'; }, 100);
 }
 
 function renderCases() {
   const el = document.getElementById('casesList');
-  if (!cases.length) { el.innerHTML='<div class="empty-state">Henüz kaydedilmiş vaka yok.</div>'; return; }
-  el.innerHTML = [...cases].reverse().map((c,i) => {
-    const cls = c.score>=80?'cs-hi':c.score>=60?'cs-md':'cs-lo';
-    const n = cases.length-i;
+  if (!cases.length) { el.innerHTML = '<div class="empty-state">Henüz kaydedilmiş vaka yok.</div>'; return; }
+  el.innerHTML = [...cases].reverse().map((c, i) => {
+    const cls = c.score >= 80 ? 'cs-hi' : c.score >= 60 ? 'cs-md' : 'cs-lo';
+    const n = cases.length - i;
     return `<div class="case-row">
       <div class="case-n">#${String(n).padStart(3,'0')}</div>
       <div class="case-info"><strong>Vaka ${n}</strong><span>${c.summary||'—'}</span></div>
@@ -632,80 +553,31 @@ function renderCases() {
 }
 
 function updateStats() {
-  document.getElementById('casePill').textContent = cases.length+' Vaka';
+  document.getElementById('casePill').textContent = cases.length + ' Vaka';
   if (cases.length) {
-    const avg = Math.round(cases.reduce((s,c)=>s+(c.score||0),0)/cases.length);
-    document.getElementById('avgPill').textContent = `%${avg} Doğruluk`;
+    const avg = Math.round(cases.reduce((s,c) => s + (c.score||0), 0) / cases.length);
+    document.getElementById('avgPill').textContent = '%' + avg + ' Doğruluk';
   }
 }
 
 function toast(msg, type='ok') {
   const t = document.getElementById('toast');
-  t.textContent = (type==='ok'?'✓ ':'✗ ')+msg;
-  t.className = `toast show ${type}`;
-  setTimeout(()=>t.classList.remove('show'), 3500);
+  t.textContent = (type==='ok' ? '✓ ' : '✗ ') + msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.classList.remove('show'), 3500);
 }
 
 document.getElementById('clearDataBtn').addEventListener('click', () => {
   if (!confirm('Tüm vaka geçmişi silinsin mi?')) return;
-  cases=[]; localStorage.removeItem('rtCases');
-  renderCases(); updateStats(); toast('Veriler silindi','ok');
+  cases = []; localStorage.removeItem('rtCases');
+  renderCases(); updateStats(); toast('Veriler silindi', 'ok');
 });
 
 document.getElementById('logoutBtn').addEventListener('click', () => {
-  fetch('/api/ping',{headers:{'Authorization':'Basic '+btoa('logout:logout')}}).finally(()=>location.reload());
+  fetch('/api/ping', { headers: { 'Authorization': 'Basic ' + btoa('logout:logout') } }).finally(() => location.reload());
 });
 
 renderCases(); updateStats();
-document.getElementById('seriesBtn').addEventListener('click', async () => {
-  if (!batchFiles.length) return;
-  document.getElementById('seriesBtn').disabled = true;
-  document.getElementById('batchStatus').textContent = `${batchFiles.length} kesit örnekleniyor...`;
-  document.getElementById('batchProgress').style.display = 'block';
-  document.getElementById('bpText').textContent = 'Gemini\'ye gönderiliyor...';
-  document.getElementById('bpFill').style.width = '30%';
-  goTab('analysis');
-
-  try {
-    const fd = new FormData();
-    // Tarayıcıda örnekle: max 20 dosya seç
-    const MAX = 20;
-    const total = batchFiles.length;
-    const sampled = total <= MAX
-      ? batchFiles
-      : Array.from({length: MAX}, (_, i) => batchFiles[Math.floor(i * total / MAX)]);
-
-    for (const f of sampled) {
-      const blob = await compressImage(f);
-      fd.append('files', blob, f.name.replace(/\.[^.]+$/, '.jpg'));
-    }
-    fd.append('cases_json', JSON.stringify(cases));
-
-    document.getElementById('bpFill').style.width = '60%';
-    document.getElementById('bpText').textContent = 'AI raporu oluşturuyor...';
-
-    const r = await fetch('/api/series', {method:'POST', body:fd, credentials:'include'});
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.detail||'Hata');
-
-    document.getElementById('bpFill').style.width = '100%';
-    document.getElementById('bpText').textContent = 'Tamamlandı';
-    document.getElementById('mainAiCard').innerHTML = `
-      <div style="font-family:var(--mono);font-size:10px;color:var(--accent);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)">
-        SERİ ANALİZİ · ${d.total_files} kesit → ${d.sampled} örnek
-      </div>
-      ${formatAI(d.report || d.analysis || JSON.stringify(d))}`;
-    document.getElementById('compareBtn').disabled = false;
-    currentAI = d.report;
-    goTab('analysis');
-    toast(`Seri raporu hazır · ${d.total_files} kesit`, 'ok');
-  } catch(e) {
-    toast('Hata: '+e.message, 'err');
-  } finally {
-    document.getElementById('seriesBtn').disabled = false;
-    document.getElementById('batchStatus').textContent = '';
-  }
-});
 </script>
 </body>
 </html>
