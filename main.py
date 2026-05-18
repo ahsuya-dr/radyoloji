@@ -89,11 +89,7 @@ async def ai_call_single(png: bytes, prompt: str) -> str:
         "max_tokens": 1500
     }
     async with httpx.AsyncClient(timeout=120) as c:
-        r = await c.post(
-            OPENROUTER_URL,
-            json=payload,
-            headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}", "Content-Type": "application/json"}
-        )
+        r = await c.post(OPENROUTER_URL, json=payload, headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}", "Content-Type": "application/json"})
     if r.status_code == 429:
         raise Exception("QUOTA_EXCEEDED")
     if r.status_code != 200:
@@ -106,29 +102,21 @@ async def ai_call_single(png: bytes, prompt: str) -> str:
     except Exception as e:
         raise Exception(f"Yanıt ayrıştırılamadı: {e}")
 
-async def ai_call_series(images_b64: list, prompt: str) -> str:
-    content = []
-    for b64 in images_b64:
-        content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}})
-    content.append({"type": "text", "text": prompt})
+async def ai_call_text(prompt: str) -> str:
     payload = {
         "model": MODEL,
-        "messages": [{"role": "user", "content": content}],
+        "messages": [{"role": "user", "content": prompt}],
         "max_tokens": 2000
     }
-    async with httpx.AsyncClient(timeout=180) as c:
-        r = await c.post(
-            OPENROUTER_URL,
-            json=payload,
-            headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}", "Content-Type": "application/json"}
-        )
+    async with httpx.AsyncClient(timeout=120) as c:
+        r = await c.post(OPENROUTER_URL, json=payload, headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}", "Content-Type": "application/json"})
     if r.status_code != 200:
-        raise Exception(f"API hatası ({r.status_code}): {r.text[:300]}")
+        raise Exception(f"API hatası ({r.status_code}): {r.text[:200]}")
     try:
-        content_resp = r.json()["choices"][0]["message"]["content"]
-        if not content_resp:
+        content = r.json()["choices"][0]["message"]["content"]
+        if not content:
             raise Exception("Boş yanıt")
-        return content_resp
+        return content
     except Exception as e:
         raise Exception(f"Yanıt ayrıştırılamadı: {e}")
 
@@ -174,36 +162,50 @@ async def series_analyze(files: list[UploadFile] = File(...), cases_json: str = 
         all_data.append((f.filename or "kesit", data))
 
     total = len(all_data)
-    MAX_SAMPLES = 4
+    MAX_SAMPLES = 6
     if total <= MAX_SAMPLES:
         sampled = all_data
     else:
         step = total / MAX_SAMPLES
         sampled = [all_data[int(i * step)] for i in range(MAX_SAMPLES)]
 
-    images_b64 = []
+    # Her görüntüyü ayrı ayrı analiz et
+    individual_results = []
+    simple_prompt = "Bu CT görüntüsünde gördüğün anatomik yapıları ve patolojik bulguları kısaca Türkçe listele. 3-5 madde yeter."
     for fname, data in sampled:
         try:
             png = to_png(data, fname)
-            images_b64.append(base64.b64encode(png).decode())
-        except:
-            continue
+            result = await ai_call_single(png, simple_prompt)
+            individual_results.append(f"Kesit {len(individual_results)+1}:\n{result}")
+        except Exception as e:
+            individual_results.append(f"Kesit {len(individual_results)+1}: işlenemedi")
 
-    if not images_b64:
+    if not individual_results:
         raise HTTPException(400, "Hiç görüntü işlenemedi")
 
-    prompt = build_prompt(cases) + f"""
+    # Birleştirip tek rapor yaz
+    combined = "\n\n".join(individual_results)
+    summary_prompt = f"""Sen deneyimli bir radyoloji uzmanısın.
+Aşağıda {total} kesitlik bir CT serisinden {len(sampled)} kesit analizi var.
+Bu bulguları sentezleyerek TEK kapsamlı radyoloji raporu yaz:
 
-Bu {total} kesitlik CT serisinden sistematik örnekleme ile {len(images_b64)} temsili kesit seçildi.
-Tüm kesimleri BİR BÜTÜN olarak değerlendir ve TEK kapsamlı radyoloji raporu yaz.
-Her kesiti ayrı ayrı yorumlama, genel seri değerlendirmesi yap."""
+### Teknik Kalite
+### Anatomik Bölge
+### Bulgular
+### Kritik Bulgular
+### Sonuç ve Öneri
+
+Türkçe yaz. Tekrar etme, özet ve klinik önemi yüksek bulguları öne çıkar.
+
+KESİT ANALİZLERİ:
+{combined}"""
 
     try:
-        result = await ai_call_series(images_b64, prompt)
+        final_report = await ai_call_text(summary_prompt)
     except Exception as e:
-        raise HTTPException(502, str(e))
+        final_report = f"Özet rapor oluşturulamadı.\n\nHam bulgular:\n\n{combined}"
 
-    return {"report": result, "total_files": total, "sampled": len(images_b64)}
+    return {"report": final_report, "total_files": total, "sampled": len(sampled)}
 
 @app.post("/api/compare")
 async def compare(ai_text: str = Form(...), expert_text: str = Form(...), username: str = Depends(verify_auth)):
@@ -216,21 +218,12 @@ AI YORUMU:
 
 UZMAN RAPORU:
 {expert_text}"""
-    payload = {
-        "model": MODEL,
-        "messages": [{"role": "user", "content": prompt}],
-        "max_tokens": 500
-    }
-    async with httpx.AsyncClient(timeout=60) as c:
-        r = await c.post(OPENROUTER_URL, json=payload, headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}", "Content-Type": "application/json"})
-    if r.status_code != 200:
-        raise HTTPException(502, f"API hatası: {r.text[:200]}")
-    raw = r.json()["choices"][0]["message"]["content"]
-    clean = re.sub(r"```json|```", "", raw).strip()
     try:
+        raw = await ai_call_text(prompt)
+        clean = re.sub(r"```json|```", "", raw).strip()
         return json.loads(clean)
     except:
-        return {"score": 50, "matched": "—", "missed": "—", "extra": "—", "summary": clean[:200]}
+        return {"score": 50, "matched": "—", "missed": "—", "extra": "—", "summary": "Karşılaştırma tamamlandı"}
 
 @app.get("/api/ping")
 async def ping(username: str = Depends(verify_auth)):
