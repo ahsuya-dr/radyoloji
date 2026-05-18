@@ -4,6 +4,7 @@ import base64
 import tempfile
 import re
 import json
+import asyncio
 from pathlib import Path
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends
@@ -18,11 +19,27 @@ app = FastAPI(title="CT Analiz")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 security = HTTPBasic()
 
-OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
-APP_PASSWORD       = os.environ.get("APP_PASSWORD", "ct1234")
-APP_USERNAME       = os.environ.get("APP_USERNAME", "doktor")
-OPENROUTER_URL     = "https://openrouter.ai/api/v1/chat/completions"
-MODEL              = "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
+# Çoklu Gemini key
+GEMINI_KEYS = [k for k in [
+    os.environ.get("GEMINI_KEY_1", ""),
+    os.environ.get("GEMINI_KEY_2", ""),
+    os.environ.get("GEMINI_KEY_3", ""),
+    os.environ.get("GEMINI_KEY_4", ""),
+] if k]
+
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent"
+APP_PASSWORD = os.environ.get("APP_PASSWORD", "ct1234")
+APP_USERNAME = os.environ.get("APP_USERNAME", "doktor")
+
+current_key_index = 0
+
+def get_next_key():
+    global current_key_index
+    if not GEMINI_KEYS:
+        raise Exception("Gemini API key bulunamadı")
+    key = GEMINI_KEYS[current_key_index % len(GEMINI_KEYS)]
+    current_key_index += 1
+    return key
 
 def verify_auth(credentials: HTTPBasicCredentials = Depends(security)):
     ok_user = secrets.compare_digest(credentials.username, APP_USERNAME)
@@ -75,50 +92,64 @@ def to_png(data: bytes, filename: str) -> bytes:
     except Exception as e:
         raise Exception(f"Görüntü hatası: {e}")
 
-async def ai_call_single(png: bytes, prompt: str) -> str:
+async def gemini_vision(png: bytes, prompt: str) -> str:
     b64 = base64.b64encode(png).decode()
     payload = {
-        "model": MODEL,
-        "messages": [{
-            "role": "user",
-            "content": [
-                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}},
-                {"type": "text", "text": prompt}
-            ]
-        }],
-        "max_tokens": 1500
+        "contents": [{"parts": [
+            {"inline_data": {"mime_type": "image/jpeg", "data": b64}},
+            {"text": prompt}
+        ]}],
+        "generationConfig": {"maxOutputTokens": 1500, "temperature": 0.2}
     }
-    async with httpx.AsyncClient(timeout=120) as c:
-        r = await c.post(OPENROUTER_URL, json=payload, headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}", "Content-Type": "application/json"})
-    if r.status_code == 429:
-        raise Exception("QUOTA_EXCEEDED")
-    if r.status_code != 200:
-        raise Exception(f"API hatası ({r.status_code}): {r.text[:300]}")
-    try:
-        content = r.json()["choices"][0]["message"]["content"]
-        if not content:
-            raise Exception("Boş yanıt")
-        return content
-    except Exception as e:
-        raise Exception(f"Yanıt ayrıştırılamadı: {e}")
+    # Tüm keyleri dene
+    last_error = None
+    for _ in range(len(GEMINI_KEYS)):
+        key = get_next_key()
+        try:
+            async with httpx.AsyncClient(timeout=120) as c:
+                r = await c.post(f"{GEMINI_URL}?key={key}", json=payload)
+            if r.status_code == 429:
+                last_error = "QUOTA_EXCEEDED"
+                continue
+            if r.status_code != 200:
+                last_error = f"API hatası ({r.status_code}): {r.text[:200]}"
+                continue
+            content = r.json()["candidates"][0]["content"]["parts"][0]["text"]
+            if not content:
+                last_error = "Boş yanıt"
+                continue
+            return content
+        except Exception as e:
+            last_error = str(e)
+            continue
+    raise Exception(last_error or "Tüm keyler başarısız")
 
-async def ai_call_text(prompt: str) -> str:
+async def gemini_text(prompt: str) -> str:
     payload = {
-        "model": MODEL,
-        "messages": [{"role": "user", "content": prompt}],
-        "max_tokens": 2000
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"maxOutputTokens": 2000, "temperature": 0.2}
     }
-    async with httpx.AsyncClient(timeout=120) as c:
-        r = await c.post(OPENROUTER_URL, json=payload, headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}", "Content-Type": "application/json"})
-    if r.status_code != 200:
-        raise Exception(f"API hatası ({r.status_code}): {r.text[:200]}")
-    try:
-        content = r.json()["choices"][0]["message"]["content"]
-        if not content:
-            raise Exception("Boş yanıt")
-        return content
-    except Exception as e:
-        raise Exception(f"Yanıt ayrıştırılamadı: {e}")
+    last_error = None
+    for _ in range(len(GEMINI_KEYS)):
+        key = get_next_key()
+        try:
+            async with httpx.AsyncClient(timeout=120) as c:
+                r = await c.post(f"{GEMINI_URL}?key={key}", json=payload)
+            if r.status_code == 429:
+                last_error = "QUOTA_EXCEEDED"
+                continue
+            if r.status_code != 200:
+                last_error = f"API hatası ({r.status_code}): {r.text[:200]}"
+                continue
+            content = r.json()["candidates"][0]["content"]["parts"][0]["text"]
+            if not content:
+                last_error = "Boş yanıt"
+                continue
+            return content
+        except Exception as e:
+            last_error = str(e)
+            continue
+    raise Exception(last_error or "Tüm keyler başarısız")
 
 def build_prompt(cases: list) -> str:
     base = """Sen deneyimli bir radyoloji uzmanısın. Tıbbi görüntüleri sistematik analiz et.
@@ -144,7 +175,7 @@ async def analyze(file: UploadFile = File(...), cases_json: str = Form(default="
         png = to_png(data, file.filename or "upload")
         cases = json.loads(cases_json) if cases_json else []
         prompt = build_prompt(cases) + "\n\nBu tıbbi görüntüyü analiz et."
-        result = await ai_call_single(png, prompt)
+        result = await gemini_vision(png, prompt)
     except Exception as e:
         raise HTTPException(502, str(e))
     return {"analysis": result, "filename": file.filename}
@@ -162,28 +193,28 @@ async def series_analyze(files: list[UploadFile] = File(...), cases_json: str = 
         all_data.append((f.filename or "kesit", data))
 
     total = len(all_data)
-    MAX_SAMPLES = 6
+    MAX_SAMPLES = 8
     if total <= MAX_SAMPLES:
         sampled = all_data
     else:
         step = total / MAX_SAMPLES
         sampled = [all_data[int(i * step)] for i in range(MAX_SAMPLES)]
 
-    # Her görüntüyü ayrı ayrı analiz et
     individual_results = []
     simple_prompt = "Bu CT görüntüsünde gördüğün anatomik yapıları ve patolojik bulguları kısaca Türkçe listele. 3-5 madde yeter."
+
     for fname, data in sampled:
         try:
             png = to_png(data, fname)
-            result = await ai_call_single(png, simple_prompt)
+            result = await gemini_vision(png, simple_prompt)
             individual_results.append(f"Kesit {len(individual_results)+1}:\n{result}")
         except Exception as e:
-            individual_results.append(f"Kesit {len(individual_results)+1}: işlenemedi")
+            individual_results.append(f"Kesit {len(individual_results)+1}: işlenemedi ({str(e)[:50]})")
+        await asyncio.sleep(0.5)
 
     if not individual_results:
         raise HTTPException(400, "Hiç görüntü işlenemedi")
 
-    # Birleştirip tek rapor yaz
     combined = "\n\n".join(individual_results)
     summary_prompt = f"""Sen deneyimli bir radyoloji uzmanısın.
 Aşağıda {total} kesitlik bir CT serisinden {len(sampled)} kesit analizi var.
@@ -201,9 +232,9 @@ KESİT ANALİZLERİ:
 {combined}"""
 
     try:
-        final_report = await ai_call_text(summary_prompt)
+        final_report = await gemini_text(summary_prompt)
     except Exception as e:
-        final_report = f"Özet rapor oluşturulamadı.\n\nHam bulgular:\n\n{combined}"
+        final_report = f"Özet rapor oluşturulamadı ({str(e)}).\n\nHam bulgular:\n\n{combined}"
 
     return {"report": final_report, "total_files": total, "sampled": len(sampled)}
 
@@ -219,7 +250,7 @@ AI YORUMU:
 UZMAN RAPORU:
 {expert_text}"""
     try:
-        raw = await ai_call_text(prompt)
+        raw = await gemini_text(prompt)
         clean = re.sub(r"```json|```", "", raw).strip()
         return json.loads(clean)
     except:
@@ -227,7 +258,7 @@ UZMAN RAPORU:
 
 @app.get("/api/ping")
 async def ping(username: str = Depends(verify_auth)):
-    return {"status": "ok"}
+    return {"status": "ok", "keys": len(GEMINI_KEYS)}
 
 static_dir = Path(__file__).parent
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
